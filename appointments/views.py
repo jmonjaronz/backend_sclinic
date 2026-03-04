@@ -142,6 +142,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         """
         appointment = self.get_object()
         user = request.user
+        
+        if user.role not in ['ADMIN_CLINIC', 'STAFF', 'SUPERADMIN']:
+            return Response({"error": "No tienes permisos para validar pagos."}, status=status.HTTP_403_FORBIDDEN)
+
+        is_approved = request.data.get('is_approved', True)
+        notes = request.data.get('notes', '')
+
+        if is_approved:
+            appointment.status = Appointment.Status.CONFIRMED
+            appointment.validated_by = user
+            appointment.validation_date = timezone.now()
+            message = "Cita confirmada exitosamente."
+        else:
+            appointment.status = Appointment.Status.PENDING_PAYMENT # O CANCELLED según prefieras
+            message = f"Pago rechazado. Notas: {notes}"
+        
+        appointment.save()
+        return Response({"message": message, "status": appointment.status}, status=status.HTTP_200_OK)
 
         if user.role not in ['ADMIN_CLINIC', 'STAFF', 'SUPERADMIN']:
             return Response({"error": "Solo el personal de la clínica puede validar pagos."}, status=status.HTTP_403_FORBIDDEN)

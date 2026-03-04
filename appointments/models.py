@@ -17,6 +17,12 @@ class Appointment(models.Model):
         COMPLETED = 'COMPLETED', 'Completada'
         NO_SHOW = 'NO_SHOW', 'Inasistencia / Cerrado'
 
+    class PaymentModality(models.TextChoices):
+        VOUCHER = 'VOUCHER', 'Subida de Voucher (Web)'
+        CASH = 'CASH', 'Efectivo / Presencial'
+        TRANSFER = 'TRANSFER', 'Transferencia Directa'
+        OTHER = 'OTHER', 'Otro'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='appointments')
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='appointments')
@@ -31,6 +37,7 @@ class Appointment(models.Model):
     
     modality = models.CharField(max_length=20, choices=Modality.choices, default=Modality.PRESENCIAL)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING_PAYMENT)
+    payment_modality = models.CharField(max_length=20, choices=PaymentModality.choices, default=PaymentModality.VOUCHER)
     
     # Payment info
     payment_voucher = models.ImageField(upload_to='vouchers/', null=True, blank=True)
