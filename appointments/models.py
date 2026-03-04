@@ -15,6 +15,7 @@ class Appointment(models.Model):
         CONFIRMED = 'CONFIRMED', 'Confirmada'
         CANCELLED = 'CANCELLED', 'Cancelada'
         COMPLETED = 'COMPLETED', 'Completada'
+        NO_SHOW = 'NO_SHOW', 'Inasistencia / Cerrado'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='appointments')
@@ -83,6 +84,7 @@ class TreatmentPlan(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='treatment_plans')
     specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='treatment_plans')
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    specialist_creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_treatment_plans')
     
     total_sessions = models.IntegerField(default=1)
     suggested_frequency = models.CharField(max_length=100, blank=True) # Ej: Semanal

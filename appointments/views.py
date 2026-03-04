@@ -181,7 +181,15 @@ class TreatmentPlanViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         clinic = serializer.validated_data.get('clinic', getattr(self.request.user, 'clinic', None))
-        serializer.save(clinic=clinic)
+        serializer.save(clinic=clinic, specialist_creator=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        # Solo el creador o un admin puede editar
+        if instance.specialist_creator != self.request.user and self.request.user.role not in ['ADMIN_CLINIC', 'SUPERADMIN']:
+             from rest_framework.exceptions import PermissionDenied
+             raise PermissionDenied("Solo el especialista que creó el plan puede modificarlo.")
+        serializer.save()
 
 class AvailabilityBlockViewSet(viewsets.ModelViewSet):
     queryset = AvailabilityBlock.objects.all()

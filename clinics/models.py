@@ -10,6 +10,10 @@ class Clinic(models.Model):
     
     # Configuración SaaS
     min_booking_days_notice = models.IntegerField(default=1, help_text="Días mínimos de anticipación para agendar.")
+    
+    # Reglas de pago
+    payment_required_before = models.BooleanField(default=True, help_text="¿Requiere pago previo para confirmar la cita?")
+    payment_grace_period_days = models.IntegerField(default=1, help_text="Días antes de la cita para pagar si es requerido.")
 
     def __str__(self):
         return self.name

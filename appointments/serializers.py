@@ -54,12 +54,12 @@ class TreatmentPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = TreatmentPlan
         fields = [
-            'id', 'clinic', 'patient', 'specialist', 'service', 
+            'id', 'clinic', 'patient', 'specialist', 'specialist_creator', 'service', 
             'total_sessions', 'suggested_frequency', 'notes', 
             'total_price', 'is_paid', 'payment_status', 'created_at',
             'sessions_count'
         ]
-        read_only_fields = ['id', 'is_paid', 'created_at']
+        read_only_fields = ['id', 'is_paid', 'created_at', 'specialist_creator']
 
     def get_sessions_count(self, obj):
         return obj.sessions.count()
