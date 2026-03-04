@@ -31,6 +31,10 @@ class Appointment(models.Model):
     headquarters = models.ForeignKey(Headquarters, on_delete=models.SET_NULL, null=True, related_name='appointments')
     treatment_plan = models.ForeignKey('TreatmentPlan', on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     
+    # B2B Integration
+    company = models.ForeignKey('companies.Company', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    agreement = models.ForeignKey('companies.Agreement', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    
     date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()

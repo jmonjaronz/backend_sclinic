@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'clinical_records.apps.ClinicalRecordsConfig',
     'psychological_tests.apps.PsychologicalTestsConfig',
     'medical_results.apps.MedicalResultsConfig',
+    'companies',
     'discounts.apps.DiscountsConfig',
 ]
 
@@ -113,6 +114,7 @@ SIMPLE_JWT = {
 }
 
 AUTHENTICATION_BACKENDS = [
+    'companies.authentication.CompanyAuthBackend',
     'users.authentication.DocumentAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]

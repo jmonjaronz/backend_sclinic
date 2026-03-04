@@ -25,35 +25,42 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if user.role == 'PATIENT':
             return base_qs.filter(patient__user=user)
         elif user.role == 'PSYCHOLOGIST':
-            # Ver las citas donde es especialista
             return base_qs.filter(specialist__user=user)
+        elif user.role == 'COMPANY' and hasattr(user, 'managed_company'):
+            # Ver las citas de todos los empleados de su empresa
+            return base_qs.filter(company=user.managed_company)
             
         return base_qs
 
     def perform_create(self, serializer):
-        # Auto-asignar clínica del usuario creador si no se envía
-        clinic = serializer.validated_data.get('clinic', getattr(self.request.user, 'clinic', None))
-        serializer.save(clinic=clinic)
+        user = self.request.user
+        clinic = serializer.validated_data.get('clinic', getattr(user, 'clinic', None))
+        
+        extra_data = {'clinic': clinic}
+        
+        if user.role == 'COMPANY' and hasattr(user, 'managed_company'):
+            extra_data['company'] = user.managed_company
+            
+        serializer.save(**extra_data)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def available_slots(self, request):
         """
         Consulta disponibilidad real de slots para un especialista, fecha y servicio.
-        Usa la clínica detectada por el middleware.
         """
         specialist_id = request.query_params.get('specialist_id')
         date_str = request.query_params.get('date')
         service_id = request.query_params.get('service_id')
         
-        # Priorizar clínica del middleware
+        # Priorizar clínica del middleware (multi-tenant)
         clinic = getattr(request, 'clinic', None)
         
-        # Fallback a clinic_id solo si no se detectó por host/header (útil para pruebas)
-        clinic_id = request.query_params.get('clinic_id')
-        
-        if not clinic and clinic_id:
-             from clinics.models import Clinic
-             clinic = Clinic.objects.filter(id=clinic_id).first()
+        # Fallback a clinic_id solo si no se detectó por host/header
+        if not clinic:
+            clinic_id = request.query_params.get('clinic_id')
+            if clinic_id:
+                from clinics.models import Clinic
+                clinic = Clinic.objects.filter(id=clinic_id).first()
 
         if not all([date_str, clinic]):
             return Response({"error": "Faltan parámetros requeridos (date) o no se detectó la clínica."}, status=status.HTTP_400_BAD_REQUEST)
@@ -63,18 +70,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         except ValueError:
             return Response({"error": "Formato de fecha inválido. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
-        from clinics.models import Clinic, Specialist, Service
+        from clinics.models import Specialist, Service
         from .services import check_availability
 
-        clinic = Clinic.objects.filter(id=clinic_id).first()
-        specialist = Specialist.objects.filter(id=specialist_id).first() if specialist_id else None
-        service = Service.objects.filter(id=service_id).first() if service_id else None
+        specialist = Specialist.objects.filter(id=specialist_id, clinic=clinic).first() if specialist_id else None
+        service = Service.objects.filter(id=service_id, clinic=clinic).first() if service_id else None
 
-        if not clinic:
-            return Response({"error": "Clínica no encontrada."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Configuración de slots (esto podría venir de la base de datos más adelante)
-        # Por ahora: de 08:00 a 20:00 cada 60 min (u otra duración si el servicio lo indica)
+        # Configuración de slots
         duration = service.duration_minutes if service else 60
         start_hour = 8
         end_hour = 20
@@ -103,7 +105,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
         return Response({
             "date": date_str,
-            "specialist": specialist.user.get_full_name() if (specialist and specialist.user) else "Cualquiera",
+            "specialist": specialist.user.get_full_name() if (specialist and getattr(specialist, 'user', None)) else "Cualquiera",
             "service": service.name if service else "General",
             "available_slots": available_slots
         })
@@ -144,25 +146,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         user = request.user
         
         if user.role not in ['ADMIN_CLINIC', 'STAFF', 'SUPERADMIN']:
-            return Response({"error": "No tienes permisos para validar pagos."}, status=status.HTTP_403_FORBIDDEN)
-
-        is_approved = request.data.get('is_approved', True)
-        notes = request.data.get('notes', '')
-
-        if is_approved:
-            appointment.status = Appointment.Status.CONFIRMED
-            appointment.validated_by = user
-            appointment.validation_date = timezone.now()
-            message = "Cita confirmada exitosamente."
-        else:
-            appointment.status = Appointment.Status.PENDING_PAYMENT # O CANCELLED según prefieras
-            message = f"Pago rechazado. Notas: {notes}"
-        
-        appointment.save()
-        return Response({"message": message, "status": appointment.status}, status=status.HTTP_200_OK)
-
-        if user.role not in ['ADMIN_CLINIC', 'STAFF', 'SUPERADMIN']:
-            return Response({"error": "Solo el personal de la clínica puede validar pagos."}, status=status.HTTP_403_FORBIDDEN)
+             return Response({"error": "Solo el personal de la clínica puede validar pagos."}, status=status.HTTP_403_FORBIDDEN)
 
         if appointment.status != Appointment.Status.PENDING_VALIDATION:
              return Response({"error": f"La cita no está pendiente de validación. Estado actual: {appointment.status}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -179,7 +163,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         elif action == 'reject':
             rejection_reason = request.data.get('reason', 'Sin motivo especificado.')
             appointment.status = Appointment.Status.PENDING_PAYMENT
-            appointment.payment_voucher = None # Opcionalmente borrar el voucher inválido
+            appointment.payment_voucher = None 
             appointment.save()
             return Response({"message": f"Pago rechazado. La cita vuelve a estar Pendiente de Pago. Motivo: {rejection_reason}"}, status=status.HTTP_200_OK)
 

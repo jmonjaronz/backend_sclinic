@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 from .models import TestBattery, PsychologicalTest, Dimension, Question, ScaleOption, Baremo, TestApplication, Answer
 
 class ScaleOptionSerializer(serializers.ModelSerializer):
@@ -65,9 +66,10 @@ class TestApplicationSerializer(serializers.ModelSerializer):
             Answer.objects.create(application=application, **answer_data)
         
         # Scoring Logic
-        total_score = 0
+        total_score: int = 0
         for answer in application.answers.all():
-            total_score += answer.selected_option.value
+            if answer.selected_option:
+                total_score += int(answer.selected_option.value)
 
         # Baremo Logic
         baremos = application.test.baremos.filter(min_score__lte=total_score, max_score__gte=total_score)
@@ -77,7 +79,6 @@ class TestApplicationSerializer(serializers.ModelSerializer):
 
         application.total_score = total_score
         application.result_label = result_label
-        from django.utils import timezone
         application.completed_at = timezone.now()
         application.save()
 
