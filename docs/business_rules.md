@@ -21,9 +21,16 @@ Este documento detalla la lógica central que rige el comportamiento de la plata
 - **Regla de Ocultación**: Si un servicio está marcado como `is_confidential_to_patient` (ej: evaluaciones de pre-empleo), el paciente no podrá ver el resultado, aunque sea el sujeto de la evaluación.
 - **Descuentos**: Los convenios corporativos tienen prioridad sobre descuentos generales si el paciente es reconocido como empleado de la empresa en convenio.
 
-## 3. Citas y Pagos
+## 3. Citas, Reprogramaciones y Anulaciones
 - **Validación de Pago**: Por defecto, las citas requieren validación de pago (voucher subido por la web) por parte del personal de `STAFF` antes de ser confirmadas.
 - **Días de Anticipación**: Las clínicas configuran un mínimo de días de anticipación para el agendamiento web.
+- **Reprogramaciones**:
+    - Cada clínica define el límite máximo de reprogramaciones permitidas por cita (`max_reschedules_allowed`, por defecto 2).
+    - El paciente debe reprogramar con una anticipación mínima definida por la clínica (`reschedule_notice_hours`, por defecto 24h).
+- **Anulaciones**:
+    - Las anulaciones por parte del paciente requieren un pre-aviso mínimo (`cancel_notice_hours`, por defecto 24h). El personal administrativo puede anular en cualquier momento.
+    - Se registra obligatoriamente el motivo de la anulación y queda guardado en la auditoría.
+- **Trazabilidad**: Todo cambio de estado, fecha u hora genera una entrada en el historial de la cita (`AppointmentHistory`) para auditoría.
 - **Capacidad**: Algunos servicios (talleres, evaluaciones grupales) pueden tener una `max_capacity` mayor a 1.
 
 ## 4. Evaluaciones Psicológicas y Médicas

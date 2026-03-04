@@ -3,7 +3,7 @@ import datetime
 from django.db.models import Q
 from .models import Appointment, AvailabilityBlock
 
-def check_availability(clinic, date, start_time, end_time, specialist=None, service=None):
+def check_availability(clinic, date, start_time, end_time, specialist=None, service=None, exclude_appointment_id=None):
     """
     Verifica si un horario está disponible considerando bloqueos, capacidad y anticipación.
     Retorna (True, "") o (False, "Motivo")
@@ -56,6 +56,9 @@ def check_availability(clinic, date, start_time, end_time, specialist=None, serv
             Appointment.Status.PENDING_VALIDATION
         ]
     )
+
+    if exclude_appointment_id:
+        existing_appointments = existing_appointments.exclude(id=exclude_appointment_id)
 
     if service and service.is_simultaneous:
         # Para servicios grupales (talleres, evaluaciones), validamos capacidad

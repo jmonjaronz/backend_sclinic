@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Appointment, AvailabilityBlock, TreatmentPlan
+from .models import Appointment, AvailabilityBlock, TreatmentPlan, AppointmentHistory
 from clinics.models import Service, Specialist
 from patients.models import Patient
 from django.db import models
@@ -67,4 +67,11 @@ class TreatmentPlanSerializer(serializers.ModelSerializer):
 class AvailabilityBlockSerializer(serializers.ModelSerializer):
     class Meta:
         model = AvailabilityBlock
+        fields = '__all__'
+
+class AppointmentHistorySerializer(serializers.ModelSerializer):
+    changed_by_name = serializers.CharField(source='changed_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = AppointmentHistory
         fields = '__all__'

@@ -49,6 +49,12 @@ class Appointment(models.Model):
     validated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='validated_appointments')
     validation_date = models.DateTimeField(null=True, blank=True)
 
+    # Rescheduling and Cancellation info
+    reschedule_count = models.PositiveIntegerField(default=0)
+    is_rescheduled = models.BooleanField(default=False)
+    cancellation_reason = models.TextField(blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -114,3 +120,29 @@ class TreatmentPlan(models.Model):
 
     def __str__(self):
         return f"Plan: {self.patient} - {self.service} ({self.total_sessions} sesiones)"
+
+class AppointmentHistory(models.Model):
+    """
+    Audit log for changes in an appointment.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='history')
+    
+    old_status = models.CharField(max_length=20, blank=True)
+    new_status = models.CharField(max_length=20, blank=True)
+    
+    old_date = models.DateField(null=True)
+    new_date = models.DateField(null=True)
+    
+    old_time = models.TimeField(null=True)
+    new_time = models.TimeField(null=True)
+    
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"History: {self.appointment.id} at {self.created_at}"

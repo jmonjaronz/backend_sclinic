@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.utils import timezone
 import datetime
-from .models import Appointment, AvailabilityBlock, TreatmentPlan
-from .serializers import AppointmentSerializer, AvailabilityBlockSerializer, TreatmentPlanSerializer
+from .models import Appointment, AvailabilityBlock, TreatmentPlan, AppointmentHistory
+from .serializers import AppointmentSerializer, AvailabilityBlockSerializer, TreatmentPlanSerializer, AppointmentHistorySerializer
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     """
@@ -168,6 +168,136 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return Response({"message": f"Pago rechazado. La cita vuelve a estar Pendiente de Pago. Motivo: {rejection_reason}"}, status=status.HTTP_200_OK)
 
         return Response({"error": "Debe enviar una 'action' válida ('approve' o 'reject')."}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def reschedule(self, request, pk=None):
+        """
+        Reprograma una cita validando límites y plazos de la clínica.
+        """
+        appointment = self.get_object()
+        clinic = appointment.clinic
+        user = request.user
+
+        # 1. Validar Límite de Reprogramaciones
+        if appointment.reschedule_count >= clinic.max_reschedules_allowed:
+            return Response({
+                "error": f"Se ha alcanzado el límite máximo de {clinic.max_reschedules_allowed} reprogramaciones para esta clínica."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Validar Plazo de Pre-aviso (horas)
+        now = timezone.now()
+        appointment_dt = timezone.make_aware(datetime.datetime.combine(appointment.date, appointment.start_time))
+        diff = appointment_dt - now
+        diff_hours = diff.total_seconds() / 3600
+
+        if diff_hours < clinic.reschedule_notice_hours:
+            return Response({
+                "error": f"La reprogramación debe hacerse con al menos {clinic.reschedule_notice_hours} horas de anticipación. Faltan {diff_hours:.1f}h."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. Datos de la nueva fecha/hora
+        new_date_str = request.data.get('date')
+        new_start_time_str = request.data.get('start_time')
+        new_end_time_str = request.data.get('end_time')
+
+        if not all([new_date_str, new_start_time_str]):
+             return Response({"error": "Debe proporcionar 'date' y 'start_time' para la nueva cita."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validar disponibilidad para el nuevo slot (opcionalmente usar el serializer o servicio directamente)
+        from .services import check_availability
+        new_date = datetime.datetime.strptime(new_date_str, "%Y-%m-%d").date()
+        new_start_time = datetime.datetime.strptime(new_start_time_str, "%H:%M").time()
+        # Si no envían end_time, calculamos basado en el servicio
+        if new_end_time_str:
+            new_end_time = datetime.datetime.strptime(new_end_time_str, "%H:%M").time()
+        else:
+            new_end_time = (datetime.datetime.combine(new_date, new_start_time) + datetime.timedelta(minutes=appointment.service.duration_minutes)).time()
+
+        is_avail, err = check_availability(
+            clinic=clinic,
+            date=new_date,
+            start_time=new_start_time,
+            end_time=new_end_time,
+            specialist=appointment.specialist,
+            service=appointment.service,
+            exclude_appointment_id=appointment.id # Importante excluir la cita actual de la validación
+        )
+        if not is_avail:
+            return Response({"error": f"El nuevo horario no está disponible: {err}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. Registrar Historial y Actualizar
+        AppointmentHistory.objects.create(
+            appointment=appointment,
+            old_status=appointment.status,
+            new_status=appointment.status, # El estado no cambia necesariamente
+            old_date=appointment.date,
+            new_date=new_date,
+            old_time=appointment.start_time,
+            new_time=new_start_time,
+            changed_by=user,
+            reason=request.data.get('reason', 'Reprogramación solicitada.')
+        )
+
+        appointment.date = new_date
+        appointment.start_time = new_start_time
+        appointment.end_time = new_end_time
+        appointment.reschedule_count += 1
+        appointment.is_rescheduled = True
+        appointment.save()
+
+        return Response({"message": "Cita reprogramada exitosamente.", "reschedule_count": appointment.reschedule_count}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel(self, request, pk=None):
+        """
+        Anula una cita validando el plazo de pre-aviso.
+        """
+        appointment = self.get_object()
+        clinic = appointment.clinic
+        user = request.user
+
+        if appointment.status in [Appointment.Status.CANCELLED, Appointment.Status.NO_SHOW]:
+            return Response({"error": "La cita ya se encuentra anulada o cerrada."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validar Plazo de Pre-aviso
+        now = timezone.now()
+        appointment_dt = timezone.make_aware(datetime.datetime.combine(appointment.date, appointment.start_time))
+        diff = appointment_dt - now
+        diff_hours = diff.total_seconds() / 3600
+
+        # Solo validar para pacientes, el Staff/Admin puede anular siempre
+        if user.role == 'PATIENT' and diff_hours < clinic.cancel_notice_hours:
+            return Response({
+                "error": f"La anulación debe hacerse con al menos {clinic.cancel_notice_hours} horas de anticipación."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        reason = request.data.get('reason', 'Anulación solicitada.')
+        
+        # Registrar Historial
+        AppointmentHistory.objects.create(
+            appointment=appointment,
+            old_status=appointment.status,
+            new_status=Appointment.Status.CANCELLED,
+            changed_by=user,
+            reason=reason
+        )
+
+        appointment.status = Appointment.Status.CANCELLED
+        appointment.cancellation_reason = reason
+        appointment.cancelled_at = now
+        appointment.save()
+
+        return Response({"message": "Cita anulada exitosamente."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def history(self, request, pk=None):
+        """
+        Retorna el historial de cambios de la cita.
+        """
+        appointment = self.get_object()
+        history = appointment.history.all()
+        serializer = AppointmentHistorySerializer(history, many=True)
+        return Response(serializer.data)
 
 
 class TreatmentPlanViewSet(viewsets.ModelViewSet):

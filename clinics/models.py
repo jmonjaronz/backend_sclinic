@@ -15,6 +15,11 @@ class Clinic(models.Model):
     payment_required_before = models.BooleanField(default=True, help_text="¿Requiere pago previo para confirmar la cita?")
     payment_grace_period_days = models.IntegerField(default=1, help_text="Días antes de la cita para pagar si es requerido.")
 
+    # Reglas de Reprogramación y Anulación
+    max_reschedules_allowed = models.IntegerField(default=2, help_text="Límite de veces que se puede reprogramar una cita.")
+    reschedule_notice_hours = models.IntegerField(default=24, help_text="Horas mínimas de anticipación para reprogramar.")
+    cancel_notice_hours = models.IntegerField(default=24, help_text="Horas mínimas de anticipación para anular.")
+
     def __str__(self):
         return self.name
 
