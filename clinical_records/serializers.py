@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import ClinicalRecord, SessionNote
+from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment
 from clinics.models import Specialist
 from patients.models import Patient
 
@@ -41,3 +41,25 @@ class ClinicalRecordSerializer(serializers.ModelSerializer):
 
     def get_patient_name(self, obj):
         return f"{obj.patient.first_name} {obj.patient.last_name}"
+
+class EmergencyAdmissionSerializer(serializers.ModelSerializer):
+    patient_name = serializers.CharField(source='patient.user.get_full_name', read_only=True)
+    specialist_name = serializers.CharField(source='specialist_in_charge.user.get_full_name', read_only=True)
+
+    class Meta:
+        model = EmergencyAdmission
+        fields = '__all__'
+
+class HospitalizationSerializer(serializers.ModelSerializer):
+    patient_name = serializers.CharField(source='patient.user.get_full_name', read_only=True)
+    room_name = serializers.CharField(source='bed.room.name', read_only=True)
+    bed_name = serializers.CharField(source='bed.name', read_only=True)
+
+    class Meta:
+        model = Hospitalization
+        fields = '__all__'
+
+class TreatmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Treatment
+        fields = '__all__'

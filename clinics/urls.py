@@ -10,6 +10,8 @@ router.register(r'public-services', PublicServiceViewSet)
 router.register(r'public-specialists', PublicSpecialistViewSet)
 router.register(r'admin/plans', SubscriptionPlanViewSet, basename='admin-plans')
 router.register(r'admin/subscriptions', SubscriptionViewSet, basename='admin-subscriptions')
+router.register(r'rooms', RoomViewSet, basename='rooms')
+router.register(r'beds', BedViewSet, basename='beds')
 
 urlpatterns = [
     path('admin/dashboard/', SuperAdminDashboardView.as_view(), name='superadmin-dashboard'),

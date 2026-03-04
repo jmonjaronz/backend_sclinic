@@ -26,6 +26,12 @@ Resumen de las capacidades actuales de la plataforma.
 - **Gestión de Archivos**: Almacenamiento organizado de resultados de laboratorio y Rayos X.
 - **Detalle Clínico**: Registro de parámetros numéricos con rangos de referencia.
 
+## 🚑 Servicios Médicos Avanzados
+- **Gestión de Triaje**: Registro rápido de signos vitales y niveles de urgencia.
+- **Control de Camas**: Visualización de disponibilidad de camas y habitaciones por sede.
+- **Hospitalización**: Seguimiento completo desde el ingreso hasta el alta médica.
+- **Planes de Tratamiento**: Prescripciones y seguimiento de medicación continua.
+
 ## 👤 Portal del Paciente
 - **Resultados Online**: Consulta de historial clínico y evaluaciones desde la web.
 - **Privacidad**: Filtros automáticos de confidencialidad para evaluaciones de contratación.

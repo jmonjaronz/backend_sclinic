@@ -49,6 +49,8 @@ class Service(models.Model):
         B2B = 'B2B', 'Bambú B2B'
         WELLNESS = 'WELLNESS', 'Bambú Bienestar'
         OCCUPATIONAL = 'OCCUPATIONAL', 'Salud Ocupacional'
+        EMERGENCY = 'EMERGENCY', 'Emergencias'
+        HOSPITALIZATION = 'HOSPITALIZATION', 'Hospitalización'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='services')
@@ -97,3 +99,30 @@ class Subscription(models.Model):
     
     def __str__(self):
         return f"{self.clinic.name} - {self.plan.name}"
+
+class Room(models.Model):
+    class RoomType(models.TextChoices):
+        GENERAL = 'GENERAL', 'Cuidado General'
+        ICU = 'ICU', 'Unidad de Cuidados Intensivos (UCI)'
+        EMERGENCY = 'EMERGENCY', 'Box de Emergencias'
+        SURGICAL = 'SURGICAL', 'Quirófano / Recuperación'
+        OTHER = 'OTHER', 'Otro'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    headquarters = models.ForeignKey(Headquarters, on_delete=models.CASCADE, related_name='rooms')
+    name = models.CharField(max_length=100) # Ej: Habitación 301
+    room_type = models.CharField(max_length=20, choices=RoomType.choices, default=RoomType.GENERAL)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.headquarters.name})"
+
+class Bed(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='beds')
+    name = models.CharField(max_length=50) # Ej: Cama A
+    is_occupied = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.room.name} - {self.name}"

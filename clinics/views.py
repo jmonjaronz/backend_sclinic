@@ -1,6 +1,10 @@
 from rest_framework import viewsets, permissions
-from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription
-from .serializers import ClinicSerializer, HeadquartersSerializer, SpecialtySerializer, ServiceSerializer, SpecialistSerializer, SubscriptionPlanSerializer, SubscriptionSerializer
+from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed
+from .serializers import (
+    ClinicSerializer, HeadquartersSerializer, SpecialtySerializer, 
+    ServiceSerializer, SpecialistSerializer, SubscriptionPlanSerializer, 
+    SubscriptionSerializer, RoomSerializer, BedSerializer
+)
 from core.permissions import IsSuperAdmin
 
 class PublicClinicViewSet(viewsets.ReadOnlyModelViewSet):
@@ -60,3 +64,25 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     permission_classes = [IsSuperAdmin]
+
+class RoomViewSet(viewsets.ModelViewSet):
+    serializer_class = RoomSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Room.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(headquarters__clinic=user.clinic)
+        return qs
+
+class BedViewSet(viewsets.ModelViewSet):
+    serializer_class = BedSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Bed.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(room__headquarters__clinic=user.clinic)
+        return qs

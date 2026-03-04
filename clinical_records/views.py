@@ -2,8 +2,11 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import ClinicalRecord, SessionNote
-from .serializers import ClinicalRecordSerializer, SessionNoteSerializer
+from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment
+from .serializers import (
+    ClinicalRecordSerializer, SessionNoteSerializer,
+    EmergencyAdmissionSerializer, HospitalizationSerializer, TreatmentSerializer
+)
 from django.db.models import Q
 
 class ClinicalRecordViewSet(viewsets.ModelViewSet):
@@ -89,3 +92,36 @@ class SessionNoteViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(note)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class EmergencyAdmissionViewSet(viewsets.ModelViewSet):
+    serializer_class = EmergencyAdmissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = EmergencyAdmission.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(clinic=user.clinic)
+        return qs
+
+class HospitalizationViewSet(viewsets.ModelViewSet):
+    serializer_class = HospitalizationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Hospitalization.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(bed__room__headquarters__clinic=user.clinic)
+        return qs
+
+class TreatmentViewSet(viewsets.ModelViewSet):
+    serializer_class = TreatmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Treatment.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(record__clinic=user.clinic)
+        return qs

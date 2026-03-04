@@ -37,3 +37,10 @@ Este documento detalla la lógica central que rige el comportamiento de la plata
 - **Tests**: Cada test pertenece a una batería. Los especialistas asignan estas baterías a los pacientes.
 - **Vencimiento**: Los tests pueden tener un plazo de vencimiento (`valid_until`) para ser completados por el paciente.
 - **Scoring**: Los puntajes se calculan automáticamente basados en las opciones seleccionadas y se comparan contra baremos configurados por la clínica.
+
+## 5. Emergencias y Hospitalización
+- **Triaje**: Todo ingreso por emergencia debe ser categorizado mediante triaje (Nivel 1: Rojo a Nivel 5: Azul).
+- **Hospitalización**: 
+    - Un paciente hospitalizado debe tener asignada una cama (`Bed`) específica.
+    - El sistema marca la cama como ocupada automáticamente al registrar el ingreso y la libera al registrar el alta médica.
+- **Tratamientos**: Los tratamientos médicos permiten el seguimiento de medicación y dosis en planes prolongados, independientes de las notas de sesión puntuales.

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription
+from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed
 
 class HeadquartersSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,3 +46,18 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = '__all__'
+
+class BedSerializer(serializers.ModelSerializer):
+    room_name = serializers.CharField(source='room.name', read_only=True)
+
+    class Meta:
+        model = Bed
+        fields = '__all__'
+
+class RoomSerializer(serializers.ModelSerializer):
+    beds = BedSerializer(many=True, read_only=True)
+    headquarters_name = serializers.CharField(source='headquarters.name', read_only=True)
+
+    class Meta:
+        model = Room
+        fields = ['id', 'headquarters', 'headquarters_name', 'name', 'room_type', 'is_active', 'beds']
