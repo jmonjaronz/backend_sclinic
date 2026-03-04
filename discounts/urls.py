@@ -1,12 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import B2BCompanyViewSet, BenefitViewSet, CompanyAffiliationViewSet, DiscountCheckViewSet
+from .views import B2BCompanyViewSet, CompanyAffiliationViewSet, BenefitViewSet
 
 router = DefaultRouter()
-router.register(r'companies', B2BCompanyViewSet)
-router.register(r'benefits', BenefitViewSet)
-router.register(r'affiliations', CompanyAffiliationViewSet)
-router.register(r'check', DiscountCheckViewSet, basename='discount-check')
+router.register(r'companies', B2BCompanyViewSet, basename='b2b-companies')
+router.register(r'affiliations', CompanyAffiliationViewSet, basename='company-affiliations')
+router.register(r'benefits', BenefitViewSet, basename='benefits')
 
 urlpatterns = [
     path('', include(router.urls)),
