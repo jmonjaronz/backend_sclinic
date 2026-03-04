@@ -69,3 +69,26 @@ class Specialist(models.Model):
     
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.clinic.name})"
+
+class SubscriptionPlan(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100) # Ej: Básico, Premium, Ocupacional Pro
+    price_monthly = models.DecimalField(max_digits=10, decimal_places=2)
+    max_appointments_month = models.IntegerField(default=100)
+    max_specialists = models.IntegerField(default=5)
+    features = models.JSONField(default=dict, help_text="Configuración de módulos activos (ej: psychological_tests: true)")
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+class Subscription(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    clinic = models.OneToOneField(Clinic, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT)
+    start_date = models.DateField(auto_now_add=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.clinic.name} - {self.plan.name}"

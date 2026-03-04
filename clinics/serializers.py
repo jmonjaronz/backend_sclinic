@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Clinic, Headquarters, Specialty, Service, Specialist
+from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription
 
 class HeadquartersSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,7 +28,21 @@ class ClinicSerializer(serializers.ModelSerializer):
     headquarters = HeadquartersSerializer(many=True, read_only=True)
     specialties = SpecialtySerializer(many=True, read_only=True)
     services = ServiceSerializer(many=True, read_only=True)
+    subscription_plan = serializers.CharField(source='subscription.plan.name', read_only=True)
     
     class Meta:
         model = Clinic
-        fields = ['id', 'name', 'subdomain', 'is_active', 'headquarters', 'specialties', 'services']
+        fields = ['id', 'name', 'subdomain', 'is_active', 'headquarters', 'specialties', 'services', 'subscription_plan']
+
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPlan
+        fields = '__all__'
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    clinic_name = serializers.CharField(source='clinic.name', read_only=True)
+    plan_name = serializers.CharField(source='plan.name', read_only=True)
+
+    class Meta:
+        model = Subscription
+        fields = '__all__'
