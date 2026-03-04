@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'appointments',
     'clinical_records.apps.ClinicalRecordsConfig',
     'psychological_tests.apps.PsychologicalTestsConfig',
+    'medical_results.apps.MedicalResultsConfig',
     'discounts.apps.DiscountsConfig',
 ]
 

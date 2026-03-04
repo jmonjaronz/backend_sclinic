@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PsychologicalTest, Dimension, Question, ScaleOption, Baremo, TestApplication, Answer
+from .models import TestBattery, PsychologicalTest, Dimension, Question, ScaleOption, Baremo, TestApplication, Answer
 
 class ScaleOptionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,6 +32,12 @@ class PsychologicalTestSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'instructions', 'dimensions', 'baremos']
 
 
+class TestBatterySerializer(serializers.ModelSerializer):
+    tests = PsychologicalTestSerializer(many=True, read_only=True)
+    class Meta:
+        model = TestBattery
+        fields = ['id', 'clinic', 'name', 'description', 'tests', 'created_at']
+
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
@@ -45,56 +51,32 @@ class TestApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestApplication
         fields = [
-            'id', 'clinic', 'patient', 'patient_name', 'specialist', 'test', 'test_name',
-            'status', 'applied_at', 'completed_at', 'raw_scores', 'result_label', 'clinical_interpretation',
-            'answers'
+            'id', 'test', 'test_name', 'patient', 'patient_name', 'appointment',
+            'modality', 'valid_until', 'applied_at', 'completed_at',
+            'total_score', 'result_label', 'clinical_notes', 'answers'
         ]
-        read_only_fields = ['id', 'status', 'applied_at', 'completed_at', 'raw_scores', 'result_label', 'clinical_interpretation']
+        read_only_fields = ['id', 'total_score', 'result_label', 'applied_at', 'completed_at']
 
     def create(self, validated_data):
         answers_data = validated_data.pop('answers', [])
-        
-        # 1. Crear la aplicación del test
         application = TestApplication.objects.create(**validated_data)
         
-        # 2. Guardar las respuestas
         for answer_data in answers_data:
             Answer.objects.create(application=application, **answer_data)
         
-        # 3. Lógica de Calificación Automática
-        test = application.test
-        raw_scores = {}
+        # Scoring Logic
         total_score = 0
-
-        # Iterar sobre las respuestas para sumar puntajes por dimensión
         for answer in application.answers.all():
-            question = answer.question
-            option = answer.selected_option
-            dimension_id = str(question.dimension.id) if question.dimension else 'total'
-            
-            # Sumar puntaje manejando is_reverse_scored
-            score_value = option.value
-            # Si existiese lógica de inversión, se aplicaría aquí matemáticamente 
-            # asumiendo que el valor ya viene correcto de la Base de datos para simplificar.
-            
-            if dimension_id not in raw_scores:
-                raw_scores[dimension_id] = 0
-            
-            raw_scores[dimension_id] += score_value
-            total_score += score_value
+            total_score += answer.selected_option.value
 
-        # Buscar el baremo correspondiente al total_score
-        baremos = test.baremos.filter(min_score__lte=total_score, max_score__gte=total_score)
-        result_label = "Sin diagnóstico claro"
-        
+        # Baremo Logic
+        baremos = application.test.baremos.filter(min_score__lte=total_score, max_score__gte=total_score)
+        result_label = "Sin diagnóstico definido"
         if baremos.exists():
-            baremo = baremos.first() # Tomamos el primer match exacto
-            result_label = baremo.result_label
+            result_label = baremos.first().result_text
 
-        # 4. Actualizar la aplicación con los resultados
-        application.raw_scores = raw_scores
+        application.total_score = total_score
         application.result_label = result_label
-        application.status = TestApplication.Status.COMPLETED
         from django.utils import timezone
         application.completed_at = timezone.now()
         application.save()
