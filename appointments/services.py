@@ -1,11 +1,21 @@
+from django.utils import timezone
+import datetime
 from django.db.models import Q
 from .models import Appointment, AvailabilityBlock
 
 def check_availability(clinic, date, start_time, end_time, specialist=None, service=None):
     """
-    Verifica si un horario está disponible considerando bloqueos y capacidad.
+    Verifica si un horario está disponible considerando bloqueos, capacidad y anticipación.
     Retorna (True, "") o (False, "Motivo")
     """
+    # 0. Verificar anticipación mínima (Regla del usuario)
+    today = timezone.now().date()
+    min_days = clinic.min_booking_days_notice
+    min_allowed_date = today + datetime.timedelta(days=min_days + 1)
+    
+    if date < min_allowed_date:
+        return False, f"Las citas deben agendarse con al menos {min_days + 1} días de anticipación. Fecha mínima permitida: {min_allowed_date}"
+
     # 1. Verificar Bloqueos de Disponibilidad (AvailabilityBlock)
     blocks = AvailabilityBlock.objects.filter(
         clinic=clinic,

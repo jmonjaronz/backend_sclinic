@@ -22,6 +22,7 @@ class Appointment(models.Model):
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='appointments')
     specialist = models.ForeignKey(Specialist, on_delete=models.SET_NULL, null=True, related_name='appointments')
     headquarters = models.ForeignKey(Headquarters, on_delete=models.SET_NULL, null=True, related_name='appointments')
+    treatment_plan = models.ForeignKey('TreatmentPlan', on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     
     date = models.DateField()
     start_time = models.TimeField()
@@ -87,7 +88,15 @@ class TreatmentPlan(models.Model):
     suggested_frequency = models.CharField(max_length=100, blank=True) # Ej: Semanal
     notes = models.TextField(blank=True)
     
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     is_paid = models.BooleanField(default=False)
+    
+    class PaymentStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pendiente'
+        PARTIAL = 'PARTIAL', 'Parcial'
+        PAID = 'PAID', 'Pagado'
+    
+    payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

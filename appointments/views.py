@@ -39,14 +39,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     def available_slots(self, request):
         """
         Consulta disponibilidad real de slots para un especialista, fecha y servicio.
+        Usa la clínica detectada por el middleware.
         """
         specialist_id = request.query_params.get('specialist_id')
         date_str = request.query_params.get('date')
-        clinic_id = request.query_params.get('clinic_id')
         service_id = request.query_params.get('service_id')
+        
+        # Priorizar clínica del middleware
+        clinic = getattr(request, 'clinic', None)
+        
+        # Fallback a clinic_id solo si no se detectó por host/header (útil para pruebas)
+        clinic_id = request.query_params.get('clinic_id')
+        
+        if not clinic and clinic_id:
+             from clinics.models import Clinic
+             clinic = Clinic.objects.filter(id=clinic_id).first()
 
-        if not all([date_str, clinic_id]):
-            return Response({"error": "Faltan parámetros requeridos (date, clinic_id)."}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([date_str, clinic]):
+            return Response({"error": "Faltan parámetros requeridos (date) o no se detectó la clínica."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -159,9 +169,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
 
 class TreatmentPlanViewSet(viewsets.ModelViewSet):
-    queryset = TreatmentPlan.objects.all()
     serializer_class = TreatmentPlanSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        base_qs = TreatmentPlan.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            base_qs = base_qs.filter(clinic=user.clinic)
+        return base_qs
+
+    def perform_create(self, serializer):
+        clinic = serializer.validated_data.get('clinic', getattr(self.request.user, 'clinic', None))
+        serializer.save(clinic=clinic)
 
 class AvailabilityBlockViewSet(viewsets.ModelViewSet):
     queryset = AvailabilityBlock.objects.all()

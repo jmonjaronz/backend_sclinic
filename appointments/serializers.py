@@ -49,10 +49,20 @@ class AppointmentSerializer(serializers.ModelSerializer):
         return data
 
 class TreatmentPlanSerializer(serializers.ModelSerializer):
+    sessions_count = serializers.SerializerMethodField()
+
     class Meta:
         model = TreatmentPlan
-        fields = '__all__'
+        fields = [
+            'id', 'clinic', 'patient', 'specialist', 'service', 
+            'total_sessions', 'suggested_frequency', 'notes', 
+            'total_price', 'is_paid', 'payment_status', 'created_at',
+            'sessions_count'
+        ]
         read_only_fields = ['id', 'is_paid', 'created_at']
+
+    def get_sessions_count(self, obj):
+        return obj.sessions.count()
 
 class AvailabilityBlockSerializer(serializers.ModelSerializer):
     class Meta:

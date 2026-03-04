@@ -7,6 +7,9 @@ class Clinic(models.Model):
     subdomain = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    
+    # Configuración SaaS
+    min_booking_days_notice = models.IntegerField(default=1, help_text="Días mínimos de anticipación para agendar.")
 
     def __str__(self):
         return self.name
