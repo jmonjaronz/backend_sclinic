@@ -36,7 +36,10 @@ Este documento detalla la lógica central que rige el comportamiento de la plata
 ## 4. Evaluaciones Psicológicas y Médicas
 - **Tests**: Cada test pertenece a una batería. Los especialistas asignan estas baterías a los pacientes.
 - **Vencimiento**: Los tests pueden tener un plazo de vencimiento (`valid_until`) para ser completados por el paciente.
-- **Scoring**: Los puntajes se calculan automáticamente basados en las opciones seleccionadas y se comparan contra baremos configurados por la clínica.
+- **Scoring Avanzado**: 
+    - **Dimensiones**: El motor calcula puntajes independientes por cada área medida (ej: Ansiedad vs Depresión).
+    - **Baremos**: Se aplican tablas de normas tanto al puntaje total como a los puntajes por dimensión.
+    - **Automatización**: La interpretación clínica ("Normal", "Moderado", etc.) se genera al instante tras completar el test.
 
 ## 5. Emergencias y Hospitalización
 - **Triaje / Signos Vitales**: 

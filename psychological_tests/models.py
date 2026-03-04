@@ -123,3 +123,15 @@ class Answer(models.Model):
     
     def __str__(self):
         return f"{self.application.id} - Q: {self.question.id}"
+
+class DimensionResult(models.Model):
+    """
+    Calculated result for a specific dimension within an application.
+    """
+    application = models.ForeignKey(TestApplication, on_delete=models.CASCADE, related_name='dimension_results')
+    dimension = models.ForeignKey(Dimension, on_delete=models.CASCADE)
+    score = models.FloatField(default=0.0)
+    result_label = models.CharField(max_length=255, blank=True)
+    
+    def __str__(self):
+        return f"{self.application.test.name} - {self.dimension.name}: {self.score}"

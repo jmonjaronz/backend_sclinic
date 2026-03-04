@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import TestBattery, PsychologicalTest, Dimension, Question, ScaleOption, Baremo, TestApplication, Answer
+from .models import (
+    TestBattery, PsychologicalTest, Dimension, Question, ScaleOption, 
+    Baremo, TestApplication, Answer, DimensionResult
+)
+from .logic import calculate_test_results
 
 class ScaleOptionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,8 +48,15 @@ class AnswerSerializer(serializers.ModelSerializer):
         model = Answer
         fields = ['id', 'question', 'selected_option']
 
+class DimensionResultSerializer(serializers.ModelSerializer):
+    dimension_name = serializers.CharField(source='dimension.name', read_only=True)
+    class Meta:
+        model = DimensionResult
+        fields = ['id', 'dimension', 'dimension_name', 'score', 'result_label']
+
 class TestApplicationSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True, write_only=True)
+    dimension_results = DimensionResultSerializer(many=True, read_only=True)
     patient_name = serializers.CharField(source='patient.user.get_full_name', read_only=True)
     test_name = serializers.CharField(source='test.name', read_only=True)
 
@@ -54,32 +65,21 @@ class TestApplicationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'test', 'test_name', 'patient', 'patient_name', 'appointment',
             'modality', 'valid_until', 'applied_at', 'completed_at',
-            'total_score', 'result_label', 'clinical_notes', 'answers'
+            'total_score', 'result_label', 'clinical_notes', 'answers', 'dimension_results'
         ]
-        read_only_fields = ['id', 'total_score', 'result_label', 'applied_at', 'completed_at']
+        read_only_fields = ['id', 'total_score', 'result_label', 'applied_at', 'completed_at', 'dimension_results']
 
     def create(self, validated_data):
         answers_data = validated_data.pop('answers', [])
         application = TestApplication.objects.create(**validated_data)
         
+        # Save answers
         for answer_data in answers_data:
             Answer.objects.create(application=application, **answer_data)
         
-        # Scoring Logic
-        total_score: int = 0
-        for answer in application.answers.all():
-            if answer.selected_option:
-                total_score += int(answer.selected_option.value)
-
-        # Baremo Logic
-        baremos = application.test.baremos.filter(min_score__lte=total_score, max_score__gte=total_score)
-        result_label = "Sin diagnóstico definido"
-        if baremos.exists():
-            result_label = baremos.first().result_text
-
-        application.total_score = total_score
-        application.result_label = result_label
-        application.completed_at = timezone.now()
-        application.save()
-
+        # Trigger scoring logic from logic.py
+        calculate_test_results(application.id)
+        
+        # Refresh from DB
+        application.refresh_from_db()
         return application

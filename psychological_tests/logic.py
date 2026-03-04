@@ -1,34 +1,66 @@
-from .models import TestApplication, Baremo
+from .models import TestApplication, Baremo, DimensionResult, Dimension
 from django.db.models import Sum
+from django.utils import timezone
 
 def calculate_test_results(application_id):
     """
-    Calculates the total score and assigns a result label based on baremos.
+    Calculates scores for each dimension and total score,
+    then assigns result labels based on baremos.
     """
     try:
         application = TestApplication.objects.get(id=application_id)
+        test = application.test
         
-        # 1. Calculate Total Score
-        total_score = application.answers.aggregate(
-            total=Sum('selected_option__value')
-        )['total'] or 0
+        # 1. Calculate and save scores per Dimension
+        dimensions = test.dimensions.all()
+        total_score = 0
         
-        application.total_score = total_score
+        for dim in dimensions:
+            # Sum values of answers belonging to this dimension
+            dim_score = application.answers.filter(
+                question__dimension=dim
+            ).aggregate(total=Sum('selected_option__value'))['total'] or 0
+            
+            # Apply weight if defined
+            weighted_score = dim_score * dim.weight
+            
+            # Find baremo for this dimension
+            dim_baremo = Baremo.objects.filter(
+                test=test,
+                dimension=dim,
+                min_score__lte=weighted_score,
+                max_score__gte=weighted_score
+            ).first()
+            
+            # Save dimension result
+            DimensionResult.objects.update_or_create(
+                application=application,
+                dimension=dim,
+                defaults={
+                    'score': weighted_score,
+                    'result_label': dim_baremo.result_text if dim_baremo else ""
+                }
+            )
+            
+            total_score += weighted_score
+
+        # 2. Assign Global Total Score and Baremo
+        application.total_score = int(total_score)
         
-        # 2. Assign Result Label (Baremo)
-        # Find the baremo that fits the score
-        baremo = Baremo.objects.filter(
-            test=application.test,
-            dimension__isnull=True, # Total score baremo
+        global_baremo = Baremo.objects.filter(
+            test=test,
+            dimension__isnull=True,
             min_score__lte=total_score,
             max_score__gte=total_score
         ).first()
         
-        if baremo:
-            application.result_label = baremo.result_text
-            application.clinical_notes = baremo.clinical_interpretation
+        if global_baremo:
+            application.result_label = global_baremo.result_text
+            application.clinical_notes = global_baremo.clinical_interpretation
         
+        application.completed_at = timezone.now()
         application.save()
+        
         return application
     except TestApplication.DoesNotExist:
         return None
