@@ -25,42 +25,89 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if user.role == 'PATIENT':
             return base_qs.filter(patient__user=user)
         elif user.role == 'PSYCHOLOGIST':
-            # Ver las citas donde es especialista
             return base_qs.filter(specialist__user=user)
+        elif user.role == 'COMPANY' and hasattr(user, 'managed_company'):
+            # Ver las citas de todos los empleados de su empresa
+            return base_qs.filter(company=user.managed_company)
             
         return base_qs
 
     def perform_create(self, serializer):
-        # Auto-asignar clínica del usuario creador si no se envía
-        clinic = serializer.validated_data.get('clinic', getattr(self.request.user, 'clinic', None))
-        serializer.save(clinic=clinic)
+        user = self.request.user
+        clinic = serializer.validated_data.get('clinic', getattr(user, 'clinic', None))
+        
+        extra_data = {'clinic': clinic}
+        
+        if user.role == 'COMPANY' and hasattr(user, 'managed_company'):
+            extra_data['company'] = user.managed_company
+            
+        serializer.save(**extra_data)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def available_slots(self, request):
         """
-        Endpoint personalizado para consultar disponibilidad.
-        Params expected: specialist_id, date, clinic_id
+        Consulta disponibilidad real de slots para un especialista, fecha y servicio.
         """
         specialist_id = request.query_params.get('specialist_id')
         date_str = request.query_params.get('date')
-        clinic_id = request.query_params.get('clinic_id')
+        service_id = request.query_params.get('service_id')
+        
+        # Priorizar clínica del middleware (multi-tenant)
+        clinic = getattr(request, 'clinic', None)
+        
+        # Fallback a clinic_id solo si no se detectó por host/header
+        if not clinic:
+            clinic_id = request.query_params.get('clinic_id')
+            if clinic_id:
+                from clinics.models import Clinic
+                clinic = Clinic.objects.filter(id=clinic_id).first()
 
-        if not all([specialist_id, date_str, clinic_id]):
-            return Response({"error": "Faltan parámetros requeridos (specialist_id, date, clinic_id)."}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([date_str, clinic]):
+            return Response({"error": "Faltan parámetros requeridos (date) o no se detectó la clínica."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
             return Response({"error": "Formato de fecha inválido. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Lógica de cálculo de slots libres... 
-        # (Dependería de los horarios de trabajo estándar del especialista, cruzándolos
-        # con citas ya existentes y bloqueos de AvailabilityBlock)
-        # Por ahora se devuelve un mock up en formato Array de horas.
+        from clinics.models import Specialist, Service
+        from .services import check_availability
+
+        specialist = Specialist.objects.filter(id=specialist_id, clinic=clinic).first() if specialist_id else None
+        service = Service.objects.filter(id=service_id, clinic=clinic).first() if service_id else None
+
+        # Configuración de slots
+        duration = service.duration_minutes if service else 60
+        start_hour = 8
+        end_hour = 20
         
+        available_slots = []
+        current_time = datetime.datetime.combine(date_obj, datetime.time(start_hour, 0))
+        end_day_time = datetime.datetime.combine(date_obj, datetime.time(end_hour, 0))
+
+        while current_time < end_day_time:
+            slot_start = current_time.time()
+            slot_end = (current_time + datetime.timedelta(minutes=duration)).time()
+            
+            is_avail, _ = check_availability(
+                clinic=clinic,
+                date=date_obj,
+                start_time=slot_start,
+                end_time=slot_end,
+                specialist=specialist,
+                service=service
+            )
+            
+            if is_avail:
+                available_slots.append(slot_start.strftime("%H:%M"))
+            
+            current_time += datetime.timedelta(minutes=duration)
+
         return Response({
-            "message": "Cálculo de slots en desarrollo.",
-            "available_slots": ["09:00", "10:00", "12:00", "16:00"]
+            "date": date_str,
+            "specialist": specialist.user.get_full_name() if (specialist and getattr(specialist, 'user', None)) else "Cualquiera",
+            "service": service.name if service else "General",
+            "available_slots": available_slots
         })
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -97,9 +144,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         """
         appointment = self.get_object()
         user = request.user
-
+        
         if user.role not in ['ADMIN_CLINIC', 'STAFF', 'SUPERADMIN']:
-            return Response({"error": "Solo el personal de la clínica puede validar pagos."}, status=status.HTTP_403_FORBIDDEN)
+             return Response({"error": "Solo el personal de la clínica puede validar pagos."}, status=status.HTTP_403_FORBIDDEN)
 
         if appointment.status != Appointment.Status.PENDING_VALIDATION:
              return Response({"error": f"La cita no está pendiente de validación. Estado actual: {appointment.status}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -116,7 +163,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         elif action == 'reject':
             rejection_reason = request.data.get('reason', 'Sin motivo especificado.')
             appointment.status = Appointment.Status.PENDING_PAYMENT
-            appointment.payment_voucher = None # Opcionalmente borrar el voucher inválido
+            appointment.payment_voucher = None 
             appointment.save()
             return Response({"message": f"Pago rechazado. La cita vuelve a estar Pendiente de Pago. Motivo: {rejection_reason}"}, status=status.HTTP_200_OK)
 
@@ -124,9 +171,27 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
 
 class TreatmentPlanViewSet(viewsets.ModelViewSet):
-    queryset = TreatmentPlan.objects.all()
     serializer_class = TreatmentPlanSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        base_qs = TreatmentPlan.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            base_qs = base_qs.filter(clinic=user.clinic)
+        return base_qs
+
+    def perform_create(self, serializer):
+        clinic = serializer.validated_data.get('clinic', getattr(self.request.user, 'clinic', None))
+        serializer.save(clinic=clinic, specialist_creator=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        # Solo el creador o un admin puede editar
+        if instance.specialist_creator != self.request.user and self.request.user.role not in ['ADMIN_CLINIC', 'SUPERADMIN']:
+             from rest_framework.exceptions import PermissionDenied
+             raise PermissionDenied("Solo el especialista que creó el plan puede modificarlo.")
+        serializer.save()
 
 class AvailabilityBlockViewSet(viewsets.ModelViewSet):
     queryset = AvailabilityBlock.objects.all()

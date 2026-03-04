@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     'appointments',
     'clinical_records.apps.ClinicalRecordsConfig',
     'psychological_tests.apps.PsychologicalTestsConfig',
+    'medical_results.apps.MedicalResultsConfig',
+    'companies',
     'discounts.apps.DiscountsConfig',
 ]
 
@@ -45,6 +47,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'clinics.middleware.ClinicMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -111,6 +114,7 @@ SIMPLE_JWT = {
 }
 
 AUTHENTICATION_BACKENDS = [
+    'companies.authentication.CompanyAuthBackend',
     'users.authentication.DocumentAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]

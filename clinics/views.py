@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions
-from .models import Clinic, Headquarters, Specialty, Service, Specialist
-from .serializers import ClinicSerializer, HeadquartersSerializer, SpecialtySerializer, ServiceSerializer, SpecialistSerializer
+from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription
+from .serializers import ClinicSerializer, HeadquartersSerializer, SpecialtySerializer, ServiceSerializer, SpecialistSerializer, SubscriptionPlanSerializer, SubscriptionSerializer
+from core.permissions import IsSuperAdmin
 
 class PublicClinicViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -43,3 +44,19 @@ class PublicSpecialistViewSet(viewsets.ReadOnlyModelViewSet):
         if clinic_id:
             return self.queryset.filter(clinic_id=clinic_id)
         return self.queryset
+
+class SubscriptionPlanViewSet(viewsets.ModelViewSet):
+    """
+    SuperAdmin management of available plans.
+    """
+    queryset = SubscriptionPlan.objects.all()
+    serializer_class = SubscriptionPlanSerializer
+    permission_classes = [IsSuperAdmin]
+
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    """
+    SuperAdmin management of clinic subscriptions.
+    """
+    queryset = Subscription.objects.all()
+    serializer_class = SubscriptionSerializer
+    permission_classes = [IsSuperAdmin]

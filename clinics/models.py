@@ -7,6 +7,13 @@ class Clinic(models.Model):
     subdomain = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    
+    # Configuración SaaS
+    min_booking_days_notice = models.IntegerField(default=1, help_text="Días mínimos de anticipación para agendar.")
+    
+    # Reglas de pago
+    payment_required_before = models.BooleanField(default=True, help_text="¿Requiere pago previo para confirmar la cita?")
+    payment_grace_period_days = models.IntegerField(default=1, help_text="Días antes de la cita para pagar si es requerido.")
 
     def __str__(self):
         return self.name
@@ -36,6 +43,7 @@ class Service(models.Model):
     class ServiceType(models.TextChoices):
         B2B = 'B2B', 'Bambú B2B'
         WELLNESS = 'WELLNESS', 'Bambú Bienestar'
+        OCCUPATIONAL = 'OCCUPATIONAL', 'Salud Ocupacional'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='services')
@@ -47,6 +55,7 @@ class Service(models.Model):
     duration_minutes = models.IntegerField(default=60)
     is_simultaneous = models.BooleanField(default=False)
     max_capacity = models.IntegerField(default=1) # Para talleres o evaluaciones presenciales
+    is_confidential_to_patient = models.BooleanField(default=False, help_text="Si es True, el paciente no podrá ver los resultados (ej: pre-empleo).")
 
     def __str__(self):
         return f"{self.name} - {self.clinic.name}"
@@ -60,3 +69,26 @@ class Specialist(models.Model):
     
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.clinic.name})"
+
+class SubscriptionPlan(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100) # Ej: Básico, Premium, Ocupacional Pro
+    price_monthly = models.DecimalField(max_digits=10, decimal_places=2)
+    max_appointments_month = models.IntegerField(default=100)
+    max_specialists = models.IntegerField(default=5)
+    features = models.JSONField(default=dict, help_text="Configuración de módulos activos (ej: psychological_tests: true)")
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+class Subscription(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    clinic = models.OneToOneField(Clinic, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT)
+    start_date = models.DateField(auto_now_add=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.clinic.name} - {self.plan.name}"
