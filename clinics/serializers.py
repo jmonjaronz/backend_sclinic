@@ -17,9 +17,12 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class SpecialistSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+
     class Meta:
         model = Specialist
-        fields = '__all__'
+        fields = ['id', 'user', 'first_name', 'last_name', 'clinic', 'specialties', 'bio']
 
 class ClinicSerializer(serializers.ModelSerializer):
     headquarters = HeadquartersSerializer(many=True, read_only=True)

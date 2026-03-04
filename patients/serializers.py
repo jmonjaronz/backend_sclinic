@@ -163,3 +163,20 @@ class PatientRegistrationSerializer(serializers.Serializer):
             )
 
         return patient
+
+class PatientSerializer(serializers.ModelSerializer):
+    emergency_contacts = EmergencyContactSerializer(many=True, required=False)
+    tutor_links = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    
+    class Meta:
+        model = Patient
+        fields = [
+            'id', 'clinic', 'first_name', 'last_name', 'document_type', 
+            'document_number', 'birth_date', 'gender', 'department', 'province', 
+            'district', 'address', 'occupation', 'religion', 'company', 
+            'native_language', 'academic_degree', 'phone', 'email', 'civil_status', 
+            'is_minor', 'educational_institution', 'grade_section', 
+            'terms_accepted', 'dependent_doc_signed', 'is_validated', 'emergency_contacts',
+            'tutor_links'
+        ]
+        read_only_fields = ['is_validated']
