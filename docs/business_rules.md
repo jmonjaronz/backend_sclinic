@@ -39,7 +39,13 @@ Este documento detalla la lógica central que rige el comportamiento de la plata
 - **Scoring**: Los puntajes se calculan automáticamente basados en las opciones seleccionadas y se comparan contra baremos configurados por la clínica.
 
 ## 5. Emergencias y Hospitalización
-- **Triaje**: Todo ingreso por emergencia debe ser categorizado mediante triaje (Nivel 1: Rojo a Nivel 5: Azul).
+- **Triaje / Signos Vitales**: 
+    - Se registran de forma independiente a la nota médica.
+    - Generan un histórico de biometría (Peso, Talla, IMC) y signos vitales (Presión, Temp, SatO2, etc.).
+    - **Configuración de Clínica**: Si la clínica activa `requires_triage_before_appointment`, el médico no podrá guardar la nota de sesión si no existe un triaje previo para esa cita.
+- **Controles Especializados**: 
+    - **Gestantes**: Seguimiento de evolución fetal y materna (LPM, AU, Semanas).
+    - **Niños (CRED)**: Monitoreo de crecimiento (PC, Peso, Talla), APGAR y alimentación.
 - **Hospitalización**: 
     - Un paciente hospitalizado debe tener asignada una cama (`Bed`) específica.
     - El sistema marca la cama como ocupada automáticamente al registrar el ingreso y la libera al registrar el alta médica.

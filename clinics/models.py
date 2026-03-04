@@ -20,6 +20,9 @@ class Clinic(models.Model):
     reschedule_notice_hours = models.IntegerField(default=24, help_text="Horas mínimas de anticipación para reprogramar.")
     cancel_notice_hours = models.IntegerField(default=24, help_text="Horas mínimas de anticipación para anular.")
 
+    # Reglas Médicas
+    requires_triage_before_appointment = models.BooleanField(default=False, help_text="¿Obliga a pasar por triaje antes de la consulta médica?")
+
     def __str__(self):
         return self.name
 

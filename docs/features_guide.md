@@ -27,7 +27,9 @@ Resumen de las capacidades actuales de la plataforma.
 - **Detalle Clínico**: Registro de parámetros numéricos con rangos de referencia.
 
 ## 🚑 Servicios Médicos Avanzados
-- **Gestión de Triaje**: Registro rápido de signos vitales y niveles de urgencia.
+- **Gestión de Triaje**: Registro estructurado de signos vitales (presión, saturación, temperatura).
+- **Seguimiento Obstétrico**: Controles prenatales con monitoreo fetal.
+- **Control de Crecimiento (CRED)**: Seguimiento neonatal (peso, talla, perímetro cefálico).
 - **Control de Camas**: Visualización de disponibilidad de camas y habitaciones por sede.
 - **Hospitalización**: Seguimiento completo desde el ingreso hasta el alta médica.
 - **Planes de Tratamiento**: Prescripciones y seguimiento de medicación continua.

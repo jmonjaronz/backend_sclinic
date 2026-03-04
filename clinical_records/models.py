@@ -114,3 +114,80 @@ class Treatment(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.record.patient}"
+
+class VitalSigns(models.Model):
+    """
+    Evolución histórica de signos vitales (Triaje).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='vital_signs_history')
+    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE)
+    appointment = models.OneToOneField('appointments.Appointment', on_delete=models.SET_NULL, null=True, blank=True, related_name='vital_signs')
+    
+    # Biometría
+    weight_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    height_cm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    bmi = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True) # IMC
+    
+    # Signos Vitales
+    temperature_c = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    heart_rate_bpm = models.IntegerField(null=True, blank=True) # Frecuencia Cardíaca
+    respiratory_rate_rpm = models.IntegerField(null=True, blank=True) # Frecuencia Respiratoria
+    blood_pressure_sys = models.IntegerField(null=True, blank=True) # Sistólica
+    blood_pressure_dia = models.IntegerField(null=True, blank=True) # Diastólica
+    oxygen_saturation = models.IntegerField(null=True, blank=True) # SpO2 (%)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    specialist = models.ForeignKey(Specialist, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Signos Vitales: {self.patient} ({self.created_at.date()})"
+
+class PrenatalControl(models.Model):
+    """
+    Seguimiento de embarazo (Obstetricia).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record = models.ForeignKey(ClinicalRecord, on_delete=models.CASCADE, related_name='prenatal_controls')
+    appointment = models.OneToOneField('appointments.Appointment', on_delete=models.CASCADE)
+    
+    gestational_weeks = models.IntegerField(help_text="Semanas de gestación")
+    fetal_heart_rate = models.IntegerField(null=True, blank=True, help_text="Latidos fetales (LPM)")
+    uterine_height_cm = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    fetal_movement = models.BooleanField(default=True)
+    
+    edema = models.CharField(max_length=50, blank=True)
+    proteinuria = models.CharField(max_length=50, blank=True)
+    
+    observations = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+class NeonatalControl(models.Model):
+    """
+    Crecimiento y Desarrollo (CRED / Pediatría).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record = models.ForeignKey(ClinicalRecord, on_delete=models.CASCADE, related_name='neonatal_controls')
+    appointment = models.OneToOneField('appointments.Appointment', on_delete=models.CASCADE)
+    
+    weight_grams = models.IntegerField()
+    length_cm = models.DecimalField(max_digits=4, decimal_places=1)
+    head_circumference_cm = models.DecimalField(max_digits=4, decimal_places=1)
+    
+    apgar_1min = models.IntegerField(null=True, blank=True)
+    apgar_5min = models.IntegerField(null=True, blank=True)
+    
+    feeding_type = models.CharField(max_length=100, blank=True) # Ej: Lactancia Materna Exclusiva
+    vaccines_applied = models.TextField(blank=True)
+    
+    neuro_development_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']

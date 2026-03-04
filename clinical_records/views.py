@@ -2,10 +2,11 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment
+from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, VitalSigns, PrenatalControl, NeonatalControl
 from .serializers import (
     ClinicalRecordSerializer, SessionNoteSerializer,
-    EmergencyAdmissionSerializer, HospitalizationSerializer, TreatmentSerializer
+    EmergencyAdmissionSerializer, HospitalizationSerializer, TreatmentSerializer,
+    VitalSignsSerializer, PrenatalControlSerializer, NeonatalControlSerializer
 )
 from django.db.models import Q
 
@@ -66,6 +67,23 @@ class SessionNoteViewSet(viewsets.ModelViewSet):
             raise ValidationError("No se puede eliminar una nota de sesión bloqueada.")
         instance.delete()
 
+    def create(self, request, *args, **kwargs):
+        # Validación de Triaje Obligatorio (Si la clínica lo requiere)
+        record_id = request.data.get('record')
+        appointment_id = request.data.get('appointment')
+        
+        if record_id and appointment_id:
+            record = ClinicalRecord.objects.get(id=record_id)
+            if record.clinic.requires_triage_before_appointment:
+                # Verificar si existe registro de Signos Vitales para esta cita
+                if not VitalSigns.objects.filter(appointment_id=appointment_id).exists():
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError(
+                        "Esta clínica requiere un triaje (Signos Vitales) previo antes de iniciar la consulta médica."
+                    )
+        
+        return super().create(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def lock(self, request, pk=None):
         """
@@ -122,6 +140,39 @@ class TreatmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = Treatment.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(record__clinic=user.clinic)
+        return qs
+
+class VitalSignsViewSet(viewsets.ModelViewSet):
+    serializer_class = VitalSignsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = VitalSigns.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(clinic=user.clinic)
+        return qs
+
+class PrenatalControlViewSet(viewsets.ModelViewSet):
+    serializer_class = PrenatalControlSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = PrenatalControl.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(record__clinic=user.clinic)
+        return qs
+
+class NeonatalControlViewSet(viewsets.ModelViewSet):
+    serializer_class = NeonatalControlSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = NeonatalControl.objects.all()
         if hasattr(user, 'clinic') and user.clinic:
             qs = qs.filter(record__clinic=user.clinic)
         return qs

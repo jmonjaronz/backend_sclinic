@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment
+from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, VitalSigns, PrenatalControl, NeonatalControl
 from clinics.models import Specialist
 from patients.models import Patient
 
@@ -62,4 +62,19 @@ class HospitalizationSerializer(serializers.ModelSerializer):
 class TreatmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Treatment
+        fields = '__all__'
+
+class VitalSignsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VitalSigns
+        fields = '__all__'
+
+class PrenatalControlSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrenatalControl
+        fields = '__all__'
+
+class NeonatalControlSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NeonatalControl
         fields = '__all__'
