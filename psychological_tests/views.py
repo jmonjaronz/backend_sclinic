@@ -42,11 +42,11 @@ class TestApplicationViewSet(viewsets.ModelViewSet):
         base_qs = TestApplication.objects.filter(clinic=clinic)
 
         if user.role == 'PATIENT':
-            return base_qs.filter(patient__user=user)
+            return base_qs.filter(patient__user=user).exclude(appointment__service__is_confidential_to_patient=True)
         
         if hasattr(user, 'managed_company'):
-            # Company managers see tests of their employees
-            return base_qs.filter(patient__employee_profiles__company=user.managed_company)
+            # Company managers ONLY see tests linked to their company via appointment
+            return base_qs.filter(appointment__company=user.managed_company)
 
         # Specialist/Admin can see tests for their clinic
         return base_qs

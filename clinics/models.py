@@ -55,6 +55,7 @@ class Service(models.Model):
     duration_minutes = models.IntegerField(default=60)
     is_simultaneous = models.BooleanField(default=False)
     max_capacity = models.IntegerField(default=1) # Para talleres o evaluaciones presenciales
+    is_confidential_to_patient = models.BooleanField(default=False, help_text="Si es True, el paciente no podrá ver los resultados (ej: pre-empleo).")
 
     def __str__(self):
         return f"{self.name} - {self.clinic.name}"

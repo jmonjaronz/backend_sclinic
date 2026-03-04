@@ -15,11 +15,11 @@ class MedicalResultViewSet(viewsets.ModelViewSet):
         base_qs = MedicalResult.objects.filter(clinic=clinic)
 
         if user.role == 'PATIENT':
-            return base_qs.filter(patient__user=user)
+            return base_qs.filter(patient__user=user).exclude(appointment__service__is_confidential_to_patient=True)
         
         if hasattr(user, 'managed_company'):
-            # Company managers see results of their employees
-            return base_qs.filter(patient__employee_profiles__company=user.managed_company)
+            # Company managers ONLY see results linked to their company via appointment
+            return base_qs.filter(appointment__company=user.managed_company)
         
         return base_qs
 
