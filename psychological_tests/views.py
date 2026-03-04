@@ -43,7 +43,12 @@ class TestApplicationViewSet(viewsets.ModelViewSet):
 
         if user.role == 'PATIENT':
             return base_qs.filter(patient__user=user)
-        # Specialist can see tests for their cases
+        
+        if hasattr(user, 'managed_company'):
+            # Company managers see tests of their employees
+            return base_qs.filter(patient__employee_profiles__company=user.managed_company)
+
+        # Specialist/Admin can see tests for their clinic
         return base_qs
 
     def perform_create(self, serializer):

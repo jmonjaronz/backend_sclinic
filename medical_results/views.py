@@ -17,6 +17,10 @@ class MedicalResultViewSet(viewsets.ModelViewSet):
         if user.role == 'PATIENT':
             return base_qs.filter(patient__user=user)
         
+        if hasattr(user, 'managed_company'):
+            # Company managers see results of their employees
+            return base_qs.filter(patient__employee_profiles__company=user.managed_company)
+        
         return base_qs
 
     def perform_create(self, serializer):

@@ -43,6 +43,7 @@ class Service(models.Model):
     class ServiceType(models.TextChoices):
         B2B = 'B2B', 'Bambú B2B'
         WELLNESS = 'WELLNESS', 'Bambú Bienestar'
+        OCCUPATIONAL = 'OCCUPATIONAL', 'Salud Ocupacional'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='services')
