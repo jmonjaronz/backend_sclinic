@@ -63,6 +63,66 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             "available_slots": ["09:00", "10:00", "12:00", "16:00"]
         })
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def upload_voucher(self, request, pk=None):
+        """
+        Sube un comprobante de pago.
+        Cambia el estado de PENDING_PAYMENT a PENDING_VALIDATION.
+        """
+        appointment = self.get_object()
+        user = request.user
+
+        # Validar permisos
+        if user.role == 'PATIENT' and appointment.patient.user != user:
+            return Response({"error": "No tienes permiso para modificar esta cita."}, status=status.HTTP_403_FORBIDDEN)
+
+        if appointment.status != Appointment.Status.PENDING_PAYMENT:
+            return Response({"error": "La cita no está en estado de Pago Pendiente."}, status=status.HTTP_400_BAD_REQUEST)
+
+        voucher = request.FILES.get('payment_voucher')
+        if not voucher:
+             return Response({"error": "Debe adjuntar una imagen del comprobante (payment_voucher)."}, status=status.HTTP_400_BAD_REQUEST)
+
+        appointment.payment_voucher = voucher
+        appointment.status = Appointment.Status.PENDING_VALIDATION
+        appointment.voucher_uploaded_at = timezone.now()
+        appointment.save()
+
+        return Response({"message": "Comprobante subido exitosamente. En espera de validación administrativa."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def validate_payment(self, request, pk=None):
+        """
+        El Admin o Staff valida el voucher y confirma la cita.
+        """
+        appointment = self.get_object()
+        user = request.user
+
+        if user.role not in ['ADMIN_CLINIC', 'STAFF', 'SUPERADMIN']:
+            return Response({"error": "Solo el personal de la clínica puede validar pagos."}, status=status.HTTP_403_FORBIDDEN)
+
+        if appointment.status != Appointment.Status.PENDING_VALIDATION:
+             return Response({"error": f"La cita no está pendiente de validación. Estado actual: {appointment.status}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        action = request.data.get('action') # 'approve' or 'reject'
+
+        if action == 'approve':
+            appointment.status = Appointment.Status.CONFIRMED
+            appointment.validated_by = user
+            appointment.validation_date = timezone.now()
+            appointment.save()
+            return Response({"message": "Pago validado. Cita CONFIRMADA."}, status=status.HTTP_200_OK)
+        
+        elif action == 'reject':
+            rejection_reason = request.data.get('reason', 'Sin motivo especificado.')
+            appointment.status = Appointment.Status.PENDING_PAYMENT
+            appointment.payment_voucher = None # Opcionalmente borrar el voucher inválido
+            appointment.save()
+            return Response({"message": f"Pago rechazado. La cita vuelve a estar Pendiente de Pago. Motivo: {rejection_reason}"}, status=status.HTTP_200_OK)
+
+        return Response({"error": "Debe enviar una 'action' válida ('approve' o 'reject')."}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class TreatmentPlanViewSet(viewsets.ModelViewSet):
     queryset = TreatmentPlan.objects.all()
     serializer_class = TreatmentPlanSerializer
