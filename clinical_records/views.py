@@ -73,14 +73,18 @@ class SessionNoteViewSet(viewsets.ModelViewSet):
         appointment_id = request.data.get('appointment')
         
         if record_id and appointment_id:
-            record = ClinicalRecord.objects.get(id=record_id)
-            if record.clinic.requires_triage_before_appointment:
-                # Verificar si existe registro de Signos Vitales para esta cita
-                if not VitalSigns.objects.filter(appointment_id=appointment_id).exists():
-                    from rest_framework.exceptions import ValidationError
-                    raise ValidationError(
-                        "Esta clínica requiere un triaje (Signos Vitales) previo antes de iniciar la consulta médica."
-                    )
+            try:
+                record = ClinicalRecord.objects.get(id=record_id)
+                if record.clinic.requires_triage_before_appointment:
+                    # Verificar si existe registro de Signos Vitales para esta cita
+                    if not VitalSigns.objects.filter(appointment_id=appointment_id).exists():
+                        from rest_framework.exceptions import ValidationError
+                        raise ValidationError(
+                            "Esta clínica requiere un triaje (Signos Vitales) previo antes de iniciar la consulta médica."
+                        )
+            except ClinicalRecord.DoesNotExist:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("El registro clínico especificado no existe.")
         
         return super().create(request, *args, **kwargs)
 

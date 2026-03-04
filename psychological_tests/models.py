@@ -52,6 +52,7 @@ class Question(models.Model):
     dimension = models.ForeignKey(Dimension, on_delete=models.CASCADE, related_name='questions')
     text = models.TextField()
     order = models.PositiveIntegerField(default=0)
+    is_reverse_scored = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['order']
@@ -66,6 +67,7 @@ class ScaleOption(models.Model):
     test = models.ForeignKey(PsychologicalTest, on_delete=models.CASCADE, related_name='scale_options')
     label = models.CharField(max_length=255)
     value = models.IntegerField()
+    order = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.test.name}: {self.label} ({self.value})"
