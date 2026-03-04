@@ -38,29 +38,64 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def available_slots(self, request):
         """
-        Endpoint personalizado para consultar disponibilidad.
-        Params expected: specialist_id, date, clinic_id
+        Consulta disponibilidad real de slots para un especialista, fecha y servicio.
         """
         specialist_id = request.query_params.get('specialist_id')
         date_str = request.query_params.get('date')
         clinic_id = request.query_params.get('clinic_id')
+        service_id = request.query_params.get('service_id')
 
-        if not all([specialist_id, date_str, clinic_id]):
-            return Response({"error": "Faltan parámetros requeridos (specialist_id, date, clinic_id)."}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([date_str, clinic_id]):
+            return Response({"error": "Faltan parámetros requeridos (date, clinic_id)."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
             return Response({"error": "Formato de fecha inválido. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Lógica de cálculo de slots libres... 
-        # (Dependería de los horarios de trabajo estándar del especialista, cruzándolos
-        # con citas ya existentes y bloqueos de AvailabilityBlock)
-        # Por ahora se devuelve un mock up en formato Array de horas.
+        from clinics.models import Clinic, Specialist, Service
+        from .services import check_availability
+
+        clinic = Clinic.objects.filter(id=clinic_id).first()
+        specialist = Specialist.objects.filter(id=specialist_id).first() if specialist_id else None
+        service = Service.objects.filter(id=service_id).first() if service_id else None
+
+        if not clinic:
+            return Response({"error": "Clínica no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Configuración de slots (esto podría venir de la base de datos más adelante)
+        # Por ahora: de 08:00 a 20:00 cada 60 min (u otra duración si el servicio lo indica)
+        duration = service.duration_minutes if service else 60
+        start_hour = 8
+        end_hour = 20
         
+        available_slots = []
+        current_time = datetime.datetime.combine(date_obj, datetime.time(start_hour, 0))
+        end_day_time = datetime.datetime.combine(date_obj, datetime.time(end_hour, 0))
+
+        while current_time < end_day_time:
+            slot_start = current_time.time()
+            slot_end = (current_time + datetime.timedelta(minutes=duration)).time()
+            
+            is_avail, _ = check_availability(
+                clinic=clinic,
+                date=date_obj,
+                start_time=slot_start,
+                end_time=slot_end,
+                specialist=specialist,
+                service=service
+            )
+            
+            if is_avail:
+                available_slots.append(slot_start.strftime("%H:%M"))
+            
+            current_time += datetime.timedelta(minutes=duration)
+
         return Response({
-            "message": "Cálculo de slots en desarrollo.",
-            "available_slots": ["09:00", "10:00", "12:00", "16:00"]
+            "date": date_str,
+            "specialist": specialist.user.get_full_name() if (specialist and specialist.user) else "Cualquiera",
+            "service": service.name if service else "General",
+            "available_slots": available_slots
         })
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])

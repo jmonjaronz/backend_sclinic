@@ -53,16 +53,25 @@ class AvailabilityBlock(models.Model):
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='availability_blocks')
     specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, null=True, blank=True, related_name='blocks') # Null means clinic-wide
     
-    start_datetime = models.DateTimeField()
-    end_datetime = models.DateTimeField()
-    reason = models.CharField(max_length=255, blank=True) # Vacations, personal, etc.
+    # Rangos de fechas para el bloqueo (Ej: Vacaciones del 10 al 20)
+    start_date = models.DateField()
+    end_date = models.DateField()
     
+    # Para bloqueos recurrentes en un horario específico (Ej: Todos los Lunes de 9 a 11)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    
+    # Días de la semana (0=Lunes, 6=Domingo). Almacenado como JSON o string separado por comas
+    # Por simplicidad usamos CharField con validación o una lista separada por comas
+    days_of_week = models.CharField(max_length=50, blank=True, help_text="0-6 separados por comas. Vacío = todos los días en el rango.")
+    
+    reason = models.CharField(max_length=255, blank=True) # Vacaciones, licencias, etc.
     is_recurring = models.BooleanField(default=False)
     # recurring_rules = ... (could be expanded later)
 
     def __str__(self):
         target = self.specialist if self.specialist else "Toda la Clínica"
-        return f"Bloqueo: {target} ({self.start_datetime} - {self.end_datetime})"
+        return f"Bloqueo: {target} ({self.start_date} al {self.end_date})"
 
 class TreatmentPlan(models.Model):
     """
