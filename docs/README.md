@@ -5,6 +5,7 @@ Bienvenido a la base de conocimiento centralizada de SCLINIC. Estos documentos s
 ## 📂 Contenido
 - [**Reglas de Negocio**](business_rules.md): Lógica central, roles, portal B2B, privacidad y pagos.
 - [**Arquitectura del Sistema**](architecture_overview.md): Estructura técnica de apps Django, multi-tenancy e integración de datos.
+- [**Estructura de Carpetas**](folder_structure.md): Resumen de la organización del código por dominios.
 - [**Guía de Funcionalidades**](features_guide.md): Catálogo de capacidades actuales (SaaS, Citas, Tests, Resultados).
 
 ## 💡 Propósito
