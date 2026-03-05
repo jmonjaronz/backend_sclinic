@@ -1,8 +1,10 @@
 from .models import Benefit, CompanyAffiliation
 from companies.models import Employee, Agreement
+from patients.models import DependentLink
 from django.db import models
 from django.db.models import Max
 from django.utils import timezone
+from decimal import Decimal
 
 def get_best_benefit(patient):
     """
@@ -52,10 +54,25 @@ def get_best_benefit(patient):
                 'object': b
             })
         
-    # 3. Check General promo benefits
+    # 3. FAMILY Logic: If patient is a dependent, check tutor's benefits
+    tutor_links = DependentLink.objects.filter(patient=patient).select_related('tutor__patient_profile')
+    for link in tutor_links:
+        if hasattr(link.tutor, 'patient_profile'):
+            tutor_patient = link.tutor.patient_profile
+            tutor_benefit = get_best_benefit(tutor_patient)
+            if tutor_benefit:
+                applicable_benefits.append({
+                    'name': f"{tutor_benefit['name']} (Beneficio Familiar)",
+                    'type': 'FAMILY',
+                    'discount_percentage': tutor_benefit['discount_percentage'],
+                    'precedence': tutor_benefit['precedence'],
+                    'object': tutor_benefit['object']
+                })
+
+    # 4. Check General promo/recurring benefits (no company needed)
     general_benefits = Benefit.objects.filter(
-        benefit_type__in=[Benefit.BenefitType.PROMO, Benefit.BenefitType.RECURRING], 
-        is_active=True, 
+        benefit_type__in=[Benefit.BenefitType.PROMO, Benefit.BenefitType.RECURRING],
+        is_active=True,
         company__isnull=True
     )
     for b in general_benefits:
@@ -66,11 +83,35 @@ def get_best_benefit(patient):
             'precedence': b.precedence,
             'object': b
         })
-    
+
     if not applicable_benefits:
         return None
-        
-    # Sort by precedence and then by highest discount percentage
+
+    # Sort by precedence desc, then by highest discount percentage desc
     applicable_benefits.sort(key=lambda x: (-x['precedence'], -x['discount_percentage']))
-    
+
     return applicable_benefits[0]
+
+
+def calculate_final_price(base_price: Decimal, patient) -> dict:
+    """
+    Returns the final price after applying the best benefit.
+    Returns a dict with: original_price, discount_percentage, final_price, benefit_applied.
+    """
+    best = get_best_benefit(patient)
+    if not best:
+        return {
+            'original_price': base_price,
+            'discount_percentage': Decimal('0'),
+            'final_price': base_price,
+            'benefit_applied': None
+        }
+
+    discount_pct = Decimal(str(best['discount_percentage']))
+    final_price = base_price * (1 - discount_pct / 100)
+    return {
+        'original_price': base_price,
+        'discount_percentage': discount_pct,
+        'final_price': round(final_price, 2),
+        'benefit_applied': best['name']
+    }

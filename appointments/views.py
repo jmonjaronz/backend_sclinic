@@ -323,6 +323,48 @@ class TreatmentPlanViewSet(viewsets.ModelViewSet):
              raise PermissionDenied("Solo el especialista que creó el plan puede modificarlo.")
         serializer.save()
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def upload_plan_voucher(self, request, pk=None):
+        """
+        Sube un solo comprobante para pagar TODAS las sesiones de un plan terapéutico.
+        Cambia el estado de todas las citas PENDING_PAYMENT del plan a PENDING_VALIDATION.
+        """
+        plan = self.get_object()
+        user = request.user
+
+        # Solo el titular del paciente o admin puede pagar el plan
+        if user.role == 'PATIENT' and plan.patient.user != user:
+            return Response({'error': 'No tienes permiso para pagar este plan.'}, status=status.HTTP_403_FORBIDDEN)
+
+        voucher = request.FILES.get('payment_voucher')
+        if not voucher:
+            return Response({'error': 'Debe adjuntar el comprobante de pago (payment_voucher).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener todas las citas pendientes del plan
+        pending_sessions = plan.sessions.filter(status=Appointment.Status.PENDING_PAYMENT)
+        count = pending_sessions.count()
+
+        if count == 0:
+            return Response({'message': 'No hay sesiones pendientes de pago en este plan.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Actualizar todas en lote
+        now = timezone.now()
+        for appt in pending_sessions:
+            appt.payment_voucher = voucher
+            appt.status = Appointment.Status.PENDING_VALIDATION
+            appt.voucher_uploaded_at = now
+            appt.payment_modality = Appointment.PaymentModality.VOUCHER
+            appt.save()
+
+        # Actualizar el estado del plan a PARTIAL o PAID según sea necesario
+        plan.payment_status = TreatmentPlan.PaymentStatus.PARTIAL
+        plan.save()
+
+        return Response({
+            'message': f'Comprobante subido para {count} sesiones. En espera de validación administrativa.',
+            'sessions_updated': count
+        }, status=status.HTTP_200_OK)
+
 class AvailabilityBlockViewSet(viewsets.ModelViewSet):
     queryset = AvailabilityBlock.objects.all()
     serializer_class = AvailabilityBlockSerializer
