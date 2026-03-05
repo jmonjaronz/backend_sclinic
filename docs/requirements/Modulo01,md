@@ -1,0 +1,55 @@
+# 🏗️Requerimiento Técnico: Infraestructura de Aislamiento y Multi-tenancy
+Este componente es el "muro de seguridad" del sistema. Su objetivo es garantizar que ninguna clínica pueda acceder a datos de otra, incluso por error humano en el desarrollo.
+
+## 1. Componente: ClinicGlobalManager (Aislamiento a nivel de Modelo)
+- **Descripción:** En lugar de filtrar en cada vista, el aislamiento debe vivir en el modelo de datos.
+- **Funcionamiento:** Se debe implementar un Manager personalizado de Django que actúe como filtro por defecto.
+- **Detalle Funcional:**
+    - Cada consulta a la base de datos ejecutada mediante Model.objects.all() incluirá automáticamente un filtro WHERE clinic_id = [ID_CLINICA_ACTUAL].
+    - Para consultas globales (SuperAdmin), se debe definir un método explícito como Model.objects.global_all() para saltar el filtro.
+- **Beneficio:** Seguridad total. Si un desarrollador nuevo olvida filtrar una consulta, el sistema protege los datos por defecto.
+
+## 2. Componente: MultiDomainMiddleware (Identificación Dinámica)
+- **Descripción:** Motor de detección de inquilino (Tenant) agnóstico al dominio.
+- **Detalle Funcional:**
+    - **Detección por Dominio/Subdominio:** El sistema extraerá el host del request y lo comparará con la base de datos de clínicas.
+    - **Independencia de Marca:** No estará amarrado a un dominio fijo (como sclinic.com). Si una clínica desea usar su propio dominio (consultorio-perez.pe), el middleware lo reconocerá mapeando el dominio al ID de la clínica.
+    - **Inyección de Contexto:** Una vez identificada la clínica, el objeto Clinic completo se adjunta al objeto request. Esto permite que cualquier parte del código acceda a la configuración de la clínica actual sin hacer consultas extra a la DB.
+
+# 🎨 Requerimiento Funcional: Whitelabel y Configuración Modular
+Este módulo permite que el SaaS se adapte a cada cliente como si fuera un software hecho a medida.
+
+## 1. Funcionalidad: DynamicBrandingEngine (Motor de Marca)
+- **Descripción:** API de configuración estética para el Frontend.
+- **Alcance:**
+    - **Identidad Visual:** Almacenamiento y entrega de logotipos, isotipos y favicons por clínica.
+    - **Personalización de UI:** Definición de una paleta de colores en formato hexadecimal (Primario, Secundario, Acento) que el Frontend de React aplicará dinámicamente mediante variables de CSS/Tailwind.
+    - **Nomenclatura Personalizada:** Capacidad de cambiar etiquetas de texto (Ej: que una clínica llame a sus pacientes "Clientes" y otra los llame "Asegurados").
+
+## 2. Funcionalidad: FeatureToggling (Habilitación de Módulos)
+- **Descripción:** Control de acceso a funcionalidades basado en el contrato comercial.
+- **Detalle de Flags (Interruptores):** Acá considerar que se puedan agregar permisos de otros módulos segun sea el caso, pero se deben tener por defecto los siguientes:
+    - **module_psychology:** Habilita tests, baremos y notas de evolución mental.
+    - **module_laboratory:** Habilita gestión de muestras, órdenes de laboratorio y valores de referencia.
+    - **module_occupational:** Habilita el portal B2B y certificados de aptitud.
+    - **module_hospitalization:** Habilita gestión de camas y triaje avanzado.
+    - **module_emergency:** Habilita el flujo de atención inmediata, clasificación por Triage Manchester (colores de prioridad), hoja de enfermería de emergencia y registro de observación de corta estancia.
+    - **module_imaging:** Habilita gestión de citas para Ecografías, Rayos X, Tomografías y Resonancias. Incluye la carga de dictámenes (informes médicos) y la visualización de imágenes (compatible con visores DICOM si se requiere en el futuro).
+    - **module_pharmacy:** Habilita control de inventario de medicamentos de la clínica, gestión de recetas electrónicas, control de lotes y fechas de vencimiento.
+    - **module_specialties_med:** Habilita historias clínicas específicas para Medicina General, Pediatría, Ginecología, etc. (cada una con sus formularios propios).
+    - **module_analytics_advanced:** Habilita dashboards de productividad por médico, tiempos de espera, análisis de rentabilidad por servicio y reportes epidemiológicos.
+- **Límites de Uso (Quotas):**
+    - **limit_storage_files:** Capacidad total en GB (vital para el módulo de imágenes, que consume mucho espacio).
+    - **limit_active_specialists:** Número máximo de profesionales con permiso de firma activa.
+    - **limit_headquarters:** Cantidad de sedes físicas que la clínica puede administrar.
+    - **limit_monthly_appointments:** Límite de citas generadas por mes (ideal para planes de entrada o "startups" médicas).
+
+# 🔐 Requerimiento de Seguridad: ClinicIsolationMixin para la API
+Este es el contrato de seguridad para todos los Endpoints del sistema.
+
+- `Nombre del Requerimiento:` Mixin de Aislamiento de Queryset.
+- **Descripción:** Clase abstracta que heredan todos los ViewSets de la API.
+- **Lógica Detallada:**
+    - **Validación de Sesión:** Verifica que el usuario pertenezca a la clínica identificada por el middleware.
+    - **Restricción Automática:** Sobrescribe el método de obtención de datos (get_queryset) para asegurar que, sin importar qué parámetros envíe el usuario en la URL, los resultados SIEMPRE estén limitados al request.clinic_id.
+    - **Falla Segura:** Si el sistema no puede identificar una clínica válida en el request, la API responderá con un error 403 Forbidden o un conjunto de datos vacío por defecto, nunca con datos globales.
