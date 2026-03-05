@@ -69,27 +69,25 @@ class PatientRegistrationSerializer(serializers.Serializer):
         ).exists():
             raise serializers.ValidationError("Un paciente con este documento ya está registrado en esta clínica.")
 
-        # Age validation
         from datetime import date
         today = date.today()
         birth_date = data.get('birth_date')
         age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
 
-        is_minor = data.get('is_minor', False)
         tutor_id = data.get('tutor_id')
+        is_staff_led = data.get('is_staff_led', False)
 
-        if not is_minor and age < 18:
-            raise serializers.ValidationError("Los pacientes menores de 18 años deben marcarse como menores de edad.")
+        # 1. Public Self-Registration (no tutor provided initially)
+        if not tutor_id and not is_staff_led:
+            if age < 18:
+                raise serializers.ValidationError("Los menores de edad no pueden registrarse directamente. Debe hacerlo su padre, madre o tutor legal desde su propia cuenta.")
         
-        if is_minor and age >= 18:
-             # This could happen if they are dependent but adult, but the flag is "is_minor"
-             # The user says "Paciente Menor de Edad o Dependiente"
-             pass # Allow for now if they are marked as minor but are 18+ (dependency)
-
-        # Require tutor for minors or if explicitly provided for dependents
-        if (is_minor or age < 18) and not tutor_id:
-            raise serializers.ValidationError("Los pacientes menores de edad requieren un tutor legal (dueño de la cuenta).")
-            
+        # 2. Registering a dependent (tutor provided)
+        if tutor_id:
+            # Relationship is required if a tutor is provided (minor/disabled adult)
+            if not data.get('relationship'):
+                raise serializers.ValidationError("Debe indicar el parentesco con el tutor legal.")
+                
         return data
 
     @transaction.atomic

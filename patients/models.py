@@ -56,6 +56,8 @@ class Patient(models.Model):
     terms_accepted = models.BooleanField(default=False)
     dependent_doc_signed = models.FileField(upload_to='patient_docs/', null=True, blank=True)
     is_validated = models.BooleanField(default=False) # Para dependientes
+    validated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='validated_patients')
+    validation_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('clinic', 'document_type', 'document_number')

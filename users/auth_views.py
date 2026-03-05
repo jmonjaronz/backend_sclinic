@@ -9,6 +9,7 @@ class LoginSerializer(serializers.Serializer):
     document_number = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
     clinic_id = serializers.UUIDField(required=False)
+    portal = serializers.ChoiceField(choices=['intranet', 'patient', 'company'], required=False)
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -25,6 +26,17 @@ class LoginView(APIView):
             )
             
             if user:
+                # Validar acceso al portal solicitado
+                portal = serializer.validated_data.get('portal')
+                if portal:
+                    role_map = {
+                        'intranet': ['ADMIN_CLINIC', 'PSYCHOLOGIST', 'STAFF', 'SUPERADMIN'],
+                        'patient': ['PATIENT', 'SUPERADMIN'],
+                        'company': ['COMPANY', 'SUPERADMIN']
+                    }
+                    if user.role not in role_map.get(portal, []):
+                        return Response({"error": f"Tu rol ({user.role}) no tiene permitido el acceso al portal {portal}."}, status=status.HTTP_403_FORBIDDEN)
+
                 refresh = RefreshToken.for_user(user)
                 return Response({
                     'refresh': str(refresh),
@@ -36,6 +48,7 @@ class LoginView(APIView):
                         'role': user.role,
                         'first_name': user.first_name,
                         'last_name': user.last_name,
+                        'clinic_id': user.clinic.id if user.clinic else None
                     }
                 })
             return Response({"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED)

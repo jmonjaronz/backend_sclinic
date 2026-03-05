@@ -36,6 +36,11 @@ class DocumentAuthBackend(ModelBackend):
                 filters['clinic_id'] = clinic_id
                 
             user = User.objects.get(**filters)
+            
+            # Check if clinic is active (if not SuperAdmin)
+            if user.role != 'SUPERADMIN' and user.clinic and not user.clinic.is_active:
+                return None
+
             if user.check_password(password):
                 return user
         except (User.DoesNotExist, User.MultipleObjectsReturned):

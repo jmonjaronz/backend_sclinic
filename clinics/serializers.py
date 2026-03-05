@@ -1,5 +1,4 @@
-from rest_framework import serializers
-from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed
+from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed, SpecialistSchedule
 
 class HeadquartersSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,3 +60,8 @@ class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = ['id', 'headquarters', 'headquarters_name', 'name', 'room_type', 'is_active', 'beds']
+
+class SpecialistScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialistSchedule
+        fields = '__all__'

@@ -53,6 +53,31 @@ class PatientViewSet(viewsets.ModelViewSet):
         # Los demás roles ven todo de su clínica
         return base_qs
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def validate_consent(self, request, pk=None):
+        """
+        Permite al personal administrativo subir el documento firmado y validar al paciente.
+        """
+        patient = self.get_object()
+        user = request.user
+        
+        # Solo personal autorizado puede validar
+        if user.role not in ['ADMIN_CLINIC', 'STAFF', 'SUPERADMIN']:
+            return Response({"detail": "No tiene permiso para validar pacientes."}, status=status.HTTP_403_FOR_CONTENT)
+            
+        document = request.FILES.get('dependent_doc_signed')
+        if not document:
+            return Response({"detail": "Debe subir el documento firmado."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        patient.dependent_doc_signed = document
+        patient.is_validated = True
+        patient.validated_by = user
+        from django.utils import timezone
+        patient.validation_date = timezone.now()
+        patient.save()
+        
+        return Response({"message": "Paciente validado exitosamente."}, status=status.HTTP_200_OK)
+
     def create(self, request, *args, **kwargs):
         """
         Bloquear la creación directa en el ViewSet si se requiere

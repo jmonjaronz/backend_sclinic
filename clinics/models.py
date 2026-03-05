@@ -80,6 +80,23 @@ class Specialist(models.Model):
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.clinic.name})"
 
+class SpecialistSchedule(models.Model):
+    """
+    Weekly base schedule for a specialist (Positive availability).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='schedules')
+    
+    # 0=Lunes, 6=Domingo
+    day_of_week = models.IntegerField(choices=[(i, str(i)) for i in range(7)])
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.specialist} - Día {self.day_of_week} ({self.start_time}-{self.end_time})"
+
 class SubscriptionPlan(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100) # Ej: Básico, Premium, Ocupacional Pro

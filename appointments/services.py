@@ -44,6 +44,29 @@ def check_availability(clinic, date, start_time, end_time, specialist=None, serv
             # Si no tiene horas, es un bloqueo de día completo en ese rango/días
             return False, f"Día bloqueado: {block.reason or 'No disponible'}"
 
+    # 1.5. Verificar Horario Base (SpecialistSchedule) - Solo si se especifica especialista
+    if specialist:
+        from clinics.models import SpecialistSchedule
+        weekday = date.weekday()
+        schedules = SpecialistSchedule.objects.filter(
+            specialist=specialist,
+            day_of_week=weekday,
+            is_active=True
+        )
+        
+        if not schedules.exists():
+            return False, "El especialista no atiende en el día seleccionado."
+            
+        # Verificar si el slot está dentro de alguno de sus turnos
+        in_schedule = False
+        for sch in schedules:
+            if start_time >= sch.start_time and end_time <= sch.end_time:
+                in_schedule = True
+                break
+        
+        if not in_schedule:
+            return False, "El horario seleccionado está fuera del turno laboral del especialista."
+
     # 2. Verificar Citas Existentes y Capacidad
     existing_appointments = Appointment.objects.filter(
         clinic=clinic,

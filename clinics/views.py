@@ -16,6 +16,14 @@ class PublicClinicViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
     lookup_field = 'subdomain'
 
+class AdminClinicViewSet(viewsets.ModelViewSet):
+    """
+    SuperAdmin management of all clinics.
+    """
+    queryset = Clinic.objects.all()
+    serializer_class = ClinicSerializer
+    permission_classes = [IsSuperAdmin]
+
 class PublicHeadquartersViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Headquarters.objects.all()
     serializer_class = HeadquartersSerializer
@@ -85,4 +93,15 @@ class BedViewSet(viewsets.ModelViewSet):
         qs = Bed.objects.all()
         if hasattr(user, 'clinic') and user.clinic:
             qs = qs.filter(room__headquarters__clinic=user.clinic)
+        return qs
+
+class SpecialistScheduleViewSet(viewsets.ModelViewSet):
+    serializer_class = SpecialistScheduleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = SpecialistSchedule.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(specialist__clinic=user.clinic)
         return qs
