@@ -20,7 +20,34 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
     - Cada clínica gestiona su propio conjunto de pacientes.
     - Un mismo individuo puede existir como paciente en múltiples clínicas, pero sus datos clínicos permanecen completamente aislados entre ellas.
 
-## 2. Separación entre Paciente y Usuario del Sistema
+## 2. Identificador Clínico del Paciente
+- **Descripción:**
+    - Cada paciente registrado dentro de una clínica debe poseer un identificador clínico único generado por el sistema.
+    - Este identificador permite:
+        - identificar pacientes incluso cuando no poseen documento de identidad
+        - evitar conflictos entre pacientes con nombres similares
+        - permitir operaciones internas del sistema sin depender de datos personales.
+    - Características del identificador:
+        - es único dentro de la clínica
+        - es generado automáticamente por el sistema
+    - no cambia durante el ciclo de vida del paciente
+
+## 3. Prevención de Registros Duplicados
+- **Descripción:**
+    - El sistema debe implementar mecanismos para prevenir la creación de registros duplicados de pacientes dentro de la misma clínica.
+- **Estrategias de detección:**
+    - Antes de crear un nuevo paciente, el sistema debe verificar posibles coincidencias utilizando combinaciones de:
+        - documento de identidad
+        - nombre completo
+        - fecha de nacimiento
+        - número telefónico.
+- **Gestión de duplicados:**
+    - Cuando el sistema detecte coincidencias potenciales, deberá:
+        - advertir al usuario administrativo
+        - permitir revisar registros existentes antes de crear uno nuevo.
+    - Esto ayuda a mantener la integridad de la información clínica.
+
+## 3. Separación entre Paciente y Usuario del Sistema
 - **Descripción:**
     - El sistema debe diferenciar claramente entre:
         - Paciente
@@ -36,7 +63,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
     - La creación de cuentas de usuario siempre debe ser realizada voluntariamente por el propio paciente.
     - Un paciente puede existir indefinidamente sin tener una cuenta digital.
 
-## 3. Gestión de Pacientes Dependientes
+## 4. Gestión de Pacientes Dependientes
 - **Descripción:**
     - El sistema debe soportar pacientes que dependen de un responsable legal para la gestión de su atención médica.
     - Esto incluye:
@@ -52,7 +79,8 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - firmar consentimientos
         - recibir información médica autorizada.
     - Reglas del responsable
-        - Cada paciente dependiente debe tener un único responsable principal registrado en el sistema.
+        - Cada paciente dependiente debe tener un responsable principal registrado en el sistema.
+        - El sistema podrá permitir registrar responsables secundarios autorizados, dependiendo de las políticas de la clínica.
         - El responsable puede tener varios pacientes dependientes asociados.
         - El responsable puede ser:
             - padre
@@ -60,7 +88,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
             - tutor legal
             - representante autorizado.
 
-## 4. Registro de Dependientes
+## 5. Registro de Dependientes
 - **Descripción:**
     - El sistema debe permitir registrar pacientes dependientes incluso si el responsable no está presente en ese momento.
     - Esto es necesario para situaciones como:
@@ -68,7 +96,6 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - derivaciones
         - atención inicial en clínicas.
     - En estos casos, el sistema permitirá crear al paciente con un estado especial.
-    - Estado: Tutor Pendiente de Validación
         - Cuando un paciente dependiente se registra sin un responsable validado, el sistema marcará su registro como:
             - Tutor pendiente de validación
     - Esto permite que:
@@ -81,8 +108,9 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - no se permitirá compartir información médica
         - algunos procesos administrativos podrán estar restringidos.
     - Esto protege legalmente a la clínica hasta que se valide la representación legal.
+El estado "Tutor pendiente de validación" representa la situación de la relación de tutela y no afecta la existencia del paciente dentro del sistema.
 
-## 5. Validación de Tutela o Representación Legal
+## 6. Validación de Tutela o Representación Legal
 - **Descripción:**
     - Para formalizar la relación entre un responsable y un paciente dependiente, el sistema debe permitir registrar documentación de respaldo.
 - **Flujo de validación:**
@@ -93,7 +121,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
     - El documento se registra en el sistema.
     - Una vez validado el documento, el estado del paciente cambia a: Tutor validado
 
-## 6. Gestión de Pacientes con Discapacidad
+## 7. Gestión de Pacientes con Discapacidad
 - **Descripción:**
     - El sistema debe permitir que pacientes adultos con discapacidad puedan tener un responsable que gestione su atención médica.
 - **Funcionamiento:**
@@ -102,7 +130,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - el responsable puede gestionar citas y autorizaciones
     - la relación debe estar respaldada por documentación válida.
 
-## 7. Independencia del Paciente al Alcanzar la Mayoría de Edad
+## 8. Independencia del Paciente al Alcanzar la Mayoría de Edad
 - **Descripción:**
     - Cuando un paciente dependiente alcanza la mayoría de edad, el sistema debe permitir que este pueda gestionar su propia cuenta digital si lo desea.
 - **Flujo de independencia:**
@@ -112,7 +140,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
     - La creación de la cuenta no es obligatoria.
     - El paciente puede continuar siendo atendido sin tener acceso digital.
 
-## 8. Acceso del Responsable a la Información del Dependiente
+## 9. Acceso del Responsable a la Información del Dependiente
 - **Descripción:**
     - El responsable autorizado puede gestionar aspectos administrativos del paciente dependiente.
 - **Restricciones:**
@@ -122,13 +150,13 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - acceso a historia clínica
         - descarga de documentos.
 
-## 9. Estados del Paciente
+## 10. Estados del Paciente
 - **Descripción:**
     - El sistema debe permitir que cada paciente tenga un estado administrativo que represente su situación dentro de la clínica.
 - **Estados posibles:**
     - Activo
         - Paciente habilitado para recibir atención médica y utilizar los servicios de la clínica.
-    - Tutor Pendiente de Validación
+    - Anonimizado
         - Paciente dependiente registrado sin documentación legal validada que respalde la relación con su responsable.
         - En este estado se permiten atenciones iniciales, pero se restringen ciertos procesos administrativos y accesos digitales.
     - Inactivo
@@ -136,7 +164,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
     - Bloqueado
         - Paciente cuyo registro se encuentra temporalmente restringido debido a situaciones administrativas o legales definidas por la clínica.
 
-## 10. Consentimiento Informado del Paciente
+## 11. Consentimiento Informado del Paciente
 - **Descripción:**
     - El sistema debe permitir registrar la aceptación de documentos de consentimiento informado por parte del paciente o su responsable legal.
     - Este proceso es necesario para cumplir con las normativas de protección de datos personales y regulaciones de atención médica.
@@ -155,7 +183,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
     - versión del documento aceptado
     - identidad del paciente o responsable que otorgó el consentimiento.
 
-## 11. Configuración de Datos Obligatorios del Paciente
+## 12. Configuración de Datos Obligatorios del Paciente
 - **Descripción:**
     - Cada clínica podrá definir qué información es obligatoria para completar el perfil del paciente dentro de su institución.
     - Esto permite adaptar el sistema a diferentes políticas administrativas y regulatorias.
@@ -172,7 +200,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - generación de documentos
         - acceso a determinados servicios administrativos.
 
-## 12. Registro de Pacientes mediante Convenios Empresariales (B2B)
+## 13. Registro de Pacientes mediante Convenios Empresariales (B2B)
 - **Descripción:**
     - El sistema debe permitir registrar pacientes provenientes de convenios empresariales o evaluaciones ocupacionales.
     - En estos escenarios, las empresas pueden proporcionar listas de trabajadores que deben ser evaluados por la clínica.
@@ -191,3 +219,44 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - estado de evaluación
         - aptitud ocupacional
         - resultados autorizados.   
+## 14. Red de Contactos de Emergencia (Contactos de Confianza)
+- **Descripción:**
+    - El sistema debe permitir la gestión de personas de contacto para situaciones críticas.
+- **Lógica de Registro:**
+    - Para Menores de Edad/Dependientes: El responsable legal se registra automáticamente como el primer contacto de emergencia.
+    - Para Adultos Independientes: Es obligatorio registrar al menos un (1) contacto durante el completado del perfil.
+- **Capacidad:**
+    - El sistema permitirá añadir contactos adicionales opcionales.
+- **Datos requeridos:**
+    - Nombre completo, parentesco (vínculo) y número telefónico activo.
+- **Visualización Crítica:**
+    - Este dato debe ser accesible mediante un "Acceso Rápido" en la ficha del paciente, permitiendo que el especialista lo vea sin necesidad de navegar profundamente en la historia clínica.
+
+## 15. Política de Retención y Anonimización (Cumplimiento LPDP)
+- **Descripción:**
+    - Gestión del ciclo de vida de los datos personales frente a la obligatoriedad de la Historia Clínica (HC).
+- **Estado: Anonimizado (Derecho al Olvido):**
+    - Cuando un paciente ejerce su derecho al olvido, el sistema no elimina el registro médico (HC), pero aplica un proceso de "borrado irreversible" de datos identificables (DNI, Nombres, Correo, Teléfono, Dirección).
+    - El registro clínico permanece vinculado a un ID interno alfanumérico para fines de auditoría legal y estadística de la clínica.
+- **Plazo de Custodia:**
+    - El sistema debe permitir configurar el tiempo de retención (ej. 15 años) tras el cual el registro anonimizado puede ser eliminado definitivamente de la base de datos de la clínica.
+
+## 16. Auditoría de Visualización (Read-Only Audit)
+- **Descripción:**
+    - Registro obligatorio de cada "evento de lectura" de información sensible.
+- **Funcionamiento:**
+    - El ClinicalAuditSystem debe disparar un registro de auditoría cada vez que un usuario abra la ficha de un paciente, consulte una nota evolutiva o descargue un resultado, aunque no realice cambios.
+- **Datos del Log:**
+    - Debe incluir Usuario, Rol Activo, Paciente Consultado, Módulo Consultado (ej. Historia Clínica, Laboratorio) y Timestamp exacto.
+- **Reporte de Intrusión:**
+    - El sistema debe facilitar reportes de "Accesos Inusuales" (ej. un personal administrativo consultando muchas historias clínicas en poco tiempo).
+
+## 17. Control de Vigencia de Consentimientos (Versionado)
+- **Descripción:**
+    - Mecanismo para asegurar que el paciente siempre esté bajo el marco legal más reciente de la clínica.
+- **Lógica de Versionado:**
+    - Cada documento de consentimiento (Términos y Condiciones, Protección de Datos, Consentimiento Clínico) tendrá un número de versión (ej. v1.0, v2.1).
+- **Bloqueo por Desactualización:**
+    - Cuando la clínica actualice un documento a una nueva versión "Mayor", el sistema debe detectar que el consentimiento del paciente es "Antiguo" (Stale).
+- **Interrupción de Flujo:**
+    - Al intentar agendar una cita o ingresar al portal, el sistema presentará automáticamente la nueva versión para su firma/aceptación, bloqueando el acceso hasta que se formalice la actualización.
