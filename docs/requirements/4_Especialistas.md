@@ -1,0 +1,266 @@
+# 👨‍⚕️ Requerimiento Funcional: Gestión de Especialistas y Disponibilidad
+Este módulo gestiona la información profesional y la disponibilidad operativa de los especialistas dentro de la clínica.
+- Su objetivo es permitir que la clínica pueda:
+    - registrar y administrar a los especialistas que prestan servicios médicos
+    - definir los servicios que cada especialista está habilitado a realizar
+    - gestionar su disponibilidad en distintas sedes y consultorios
+    - controlar bloqueos y excepciones en su agenda de atención.
+- El módulo también permite establecer la base estructural sobre la cual operará posteriormente el sistema de agenda y citas médicas.
+- La gestión de especialistas se realiza de manera independiente para cada clínica, garantizando que la información profesional no sea compartida entre instituciones dentro del entorno multi-tenant del sistema.
+
+## 1. Registro de Especialistas
+- **Descripción:**
+    - El sistema debe permitir registrar especialistas que prestan servicios médicos dentro de la clínica.
+    - El registro puede ser realizado por:
+        - personal administrativo (designado)
+        - personal de recursos humanos (designado)
+        - administradores del sistema 
+    - El registro del especialista permite identificar a los profesionales que brindan atención médica dentro de la institución.
+- **Información básica del especialista:**
+    - El sistema debe registrar información como:
+        - nombres y apellidos
+        - documento de identidad
+        - especialidad médica o profesional
+        - subespecialidad (opcional)
+        - número de colegiatura profesional
+        - colegio profesional correspondiente (ej. CMP, CPSP)
+        - estado del especialista dentro de la clínica (Ejemplo: activo, inactivo (ya no atiende , pero su historial se conserva), suspendido). 
+    - El número de colegiatura permite verificar la validez del profesional en los portales oficiales de los colegios profesionales correspondientes.
+- **Perfil dual del especialista:**
+    - El perfil del especialista debe dividirse en dos vistas diferenciadas.
+    - Vista Pública (Portal de Pacientes)
+        - Información visible para los pacientes al momento de seleccionar un especialista.
+        - Puede incluir:
+            - fotografía profesional
+            - nombre completo
+            - especialidad
+            - número de colegiatura
+            - años de experiencia
+            - formación académica
+            - biografía profesional
+            - idiomas
+            - palabras clave o áreas de especialización.
+    - Algunos campos podrán ser opcionales según la política de la clínica.
+    - Vista Interna (Intranet de la Clínica)
+        - Información accesible únicamente para el personal administrativo o de gestión.
+        - Incluye datos como:
+            - documento de identidad
+            - datos de contacto
+            - sedes asignadas
+            - servicios habilitados
+            - métricas operativas (opcional)
+            - estado laboral dentro de la clínica.
+            - tipo de especialista
+- **Conservación del historial del especialista**
+    - Los especialistas no deben eliminarse físicamente del sistema una vez registrados.
+    - Cuando un especialista deja de prestar servicios en la clínica, su estado debe cambiar a "Inactivo".
+    - Esto permite conservar el historial de citas, atenciones y registros clínicos asociados al profesional.
+- **Especialidad y subespecialidad**
+    - El sistema debe permitir registrar la especialidad principal del profesional y, opcionalmente, una subespecialidad cuando corresponda.
+    - Ejemplo:
+        - Especialidad: Medicina
+        - Subespecialidad: Cardiología
+- **Tipo de especialista**
+    - El sistema debe permitir clasificar a los especialistas según su relación con la clínica.
+    - Esto permite diferenciar entre profesionales que trabajan permanentemente en la institución y aquellos que prestan servicios de manera externa o por convenio.
+    - Ejemplos:
+        - Especialista interno
+        - Especialista externo
+        - Especialista por convenio.
+
+## 2. Gestión de Servicios del Especialista
+- **Descripción:**
+    - El sistema debe permitir vincular a cada especialista con los servicios médicos que está autorizado a brindar dentro de la clínica.
+    - Esto permite que el sistema determine qué tipo de citas pueden agendarse con cada profesional.
+- **Mapeo Especialista-Servicio**
+    - Un especialista puede estar habilitado para uno o varios servicios.
+    - Ejemplos:
+        - Consulta general
+        - Evaluación psicológica
+        - Terapia de pareja
+        - Terapia grupal
+        - Evaluación ocupacional.
+- **Configuración de duración de atención**
+    - Cada servicio debe tener una duración base definida dentro del sistema.
+    - Sin embargo, la clínica puede configurar duraciones específicas por especialista cuando sea necesario.
+    - Ejemplo:
+        - Servicio: Consulta general
+        - Duración base: 20 minutos
+        - Especialista A
+        - Duración configurada: 30 minutos.
+- **Buffer o tiempo de holgura entre citas**
+    - Para evitar retrasos acumulados en la agenda, el sistema debe permitir configurar un tiempo adicional de separación entre citas.
+    - Este tiempo permite que el especialista pueda:
+        - registrar información clínica
+        - preparar el consultorio
+        - completar documentación
+        - evitar retrasos en la agenda.
+    - Ejemplo:
+        - Consulta médica
+        - Duración: 20 minutos
+        - Buffer: 5 minutos
+        - Tiempo total bloqueado en agenda: 25 minutos
+- **Capacidad por servicio**
+    - Algunos servicios permiten atender más de un paciente simultáneamente.
+    - Ejemplos:
+        - Consulta individual
+        - Capacidad: 1 paciente
+        - Terapia de pareja
+        - Capacidad: 2 pacientes
+        - Terapia grupal
+        - Capacidad: múltiples pacientes.
+    - La capacidad de atención está asociada al servicio, no al especialista.
+    - Ejemplo:
+        - Servicio: Consulta general
+        - Duración base: 20 minutos
+        - Especialista A
+        - Duración configurada: 30 minutos
+- **Preparación previa del paciente**
+    - Algunos servicios requieren que el paciente realice preparaciones antes de la cita.
+    - Ejemplos:
+        - ayuno previo para análisis de sangre
+        - suspensión temporal de medicamentos
+        - asistencia con acompañante
+        - traer documentación médica previa.
+    - El sistema debe permitir registrar estas instrucciones dentro del servicio para que puedan ser comunicadas al paciente durante el proceso de agendamiento.
+- **Consentimientos asociados al servicio**
+    - Determinados servicios pueden requerir la aceptación de consentimientos específicos antes de su realización.
+    - Ejemplos:
+        - consentimiento para atención psicológica
+        - consentimiento para procedimientos médicos
+        - consentimiento para evaluaciones ocupacionales.
+    - El sistema debe permitir asociar documentos de consentimiento a servicios específicos para asegurar el cumplimiento de los requisitos legales antes de la atención médica.
+- **Requerimientos de recursos especiales**
+    - Algunos servicios requieren el uso de equipos o recursos clínicos específicos.
+    - Ejemplos:
+        - ecógrafo
+        - equipo de rayos X
+        - camilla de fisioterapia
+        - equipos de diagnóstico.
+    - El sistema debe permitir registrar estos requerimientos para evitar que un servicio sea agendado cuando el recurso necesario no se encuentra disponible.
+
+## 3. Gestión de Sedes
+- **Descripción:**
+    - El sistema debe permitir registrar las sedes físicas en las que opera la clínica.
+    - Cada especialista podrá estar habilitado para atender en una o más sedes de la institución.
+    - Esto permite garantizar que las citas presenciales se asignen únicamente en ubicaciones donde el especialista realmente atiende.
+- **Asignación de especialistas a sedes**
+    - Un especialista puede estar asignado a una o varias sedes.
+    - Ejemplo:
+        - Dr. Pérez
+        - Sede Centro → Lunes y Miércoles
+        - Sede Norte → Viernes.
+    - La asignación de sedes permite posteriormente configurar horarios específicos por ubicación.
+- **Horarios por sede**
+    - Cada sede puede tener horarios de atención específicos.
+    - Ejemplo:
+        - Sede Centro
+        - Lunes a Viernes → 8:00 AM - 6:00 PM
+        - Sábado → 9:00 AM - 2:00 PM.
+    - La asignación de horarios por sede permite configurar la disponibilidad del especialista dentro de la ubicación correspondiente.
+
+## 4. Gestión de Consultorios y Recursos
+- **Descripción:**
+    - El sistema debe permitir registrar los consultorios o espacios físicos donde se realizan las atenciones médicas.
+    - Esto permite evitar conflictos operativos como la asignación simultánea de varios especialistas al mismo consultorio.
+    - Ejemplos de recursos físicos:
+        - consultorio médico
+        - sala de terapia
+        - sala de procedimientos
+        - sala de ecografía.
+- **Asignación de consultorios**
+    - Los horarios de atención del especialista deben estar vinculados a un consultorio específico dentro de la sede correspondiente.
+    - Esto permite que el sistema pueda gestionar correctamente la disponibilidad física de los espacios clínicos.
+    - Una cita médica solo puede programarse cuando existe simultáneamente:
+        - disponibilidad del especialista
+        - disponibilidad del consultorio
+        - disponibilidad del recurso requerido por el servicio (si aplica).
+
+## 5. Gestión de Disponibilidad del Especialista
+- **Descripción:**
+    - El sistema debe permitir definir los horarios en los que un especialista se encuentra disponible para brindar atención médica.
+    - Estos horarios constituyen la base para la generación de la agenda de citas.
+- **Horario maestro recurrente**
+    - La disponibilidad del especialista puede definirse mediante horarios recurrentes.
+    - Ejemplo:
+        - Martes
+        - 08:00 – 14:00
+        - Sede Norte
+        - Consultorio 3
+    - Este horario representa la disponibilidad regular del especialista dentro de la clínica.
+- **Modalidad de atención**
+    - Cada horario puede configurarse según la modalidad de atención.
+    - Opciones posibles:
+        - presencial
+        - virtual
+        - ambas.
+    - Cuando el horario se configura como ambas, el especialista puede atender tanto pacientes presenciales como consultas virtuales dentro del mismo periodo.
+- **Configuración de consulta virtual**
+    - Cuando un horario permite atención virtual, el sistema debe permitir configurar:
+        - plataforma de teleconsulta (Zoom, Meet, sistema propio (Integrarlo))
+        - generación automática de enlace de sesión
+        - envío del enlace al paciente.
+
+## 6. Gestión de Bloqueos y Excepciones
+- **Descripción:**
+    - El sistema debe permitir registrar bloqueos que modifiquen la disponibilidad normal del especialista.
+    - Estos bloqueos representan situaciones excepcionales que afectan su agenda.
+- **Tipos de bloqueos**
+    - Bloqueo por rango de fechas
+        - Ejemplo: vacaciones o licencias prolongadas.
+    - Bloqueo puntual
+        - Ejemplo: congreso médico o capacitación.
+    - Bloqueo parcial
+        - Ejemplo: reunión interna dentro del horario habitual.
+- **Bloqueos globales del especialista**
+    - Los bloqueos deben poder aplicarse a nivel del especialista completo, independientemente de la sede o modalidad de atención.
+    - Ejemplo:
+        - Si el especialista se encuentra enfermo o de vacaciones, el sistema debe bloquear automáticamente todas sus disponibilidades en:
+            - todas las sedes
+            - todas las modalidades
+            - todos los consultorios.
+    - Esto evita inconsistencias en agendas distribuidas en múltiples ubicaciones.
+- **Gestión administrativa de bloqueos**
+    - Para evitar conflictos en la agenda, los bloqueos de disponibilidad deben ser gestionados principalmente por:
+        - personal administrativo
+        - responsables de gestión médica
+        - personal de recursos humanos.
+    - Los especialistas pueden solicitar bloqueos, pero su aprobación debe realizarse mediante los canales administrativos correspondientes.
+
+## 7. Detección de Conflictos en la Agenda
+- **Descripción:**
+    - Cuando se registra un bloqueo que afecta citas ya programadas, el sistema debe detectar automáticamente el conflicto.
+- **Gestión del conflicto**
+    - El sistema debe mostrar al personal administrativo las citas afectadas y permitir acciones como:
+        - reprogramar citas en nuevas fechas
+        - reasignar pacientes a otros especialistas disponibles
+        - cancelar citas y gestionar devoluciones o créditos.
+    - La comunicación con los pacientes podrá realizarse manualmente por parte del personal de la clínica.
+
+## 8. Integración con el Módulo de Agenda
+- **Descripción:**
+    - El módulo de especialistas no gestiona directamente las citas médicas.
+    - Su función es proporcionar la información necesaria para que el módulo de agenda pueda operar correctamente.
+    - Entre estos datos se encuentran:
+        - especialistas registrados
+        - servicios habilitados
+        - duración de los servicios
+        - disponibilidad del especialista
+        - sedes y consultorios.
+    - El módulo de agenda utilizará esta información para generar los espacios disponibles de atención.
+
+## 9. Nota de Arquitectura: Integración con Sistemas de Recursos Humanos
+- **Descripción:**
+    - La gestión de recursos humanos (RRHH), incluyendo:
+        - contratos laborales
+        - planillas
+        - control de asistencia
+        - vacaciones oficiales
+        - licencias laborales
+    - no forma parte del alcance del sistema clínico.
+    - Estos procesos pueden ser gestionados por un sistema externo de RRHH.
+    - Sin embargo, el sistema clínico debe permitir una integración sencilla mediante APIs, de forma que los sistemas de recursos humanos puedan enviar información relevante como:
+        - bloqueos por vacaciones
+        - licencias aprobadas
+        - cambios en el estado laboral del especialista.
+    - Esto permite mantener una arquitectura desacoplada entre los sistemas administrativos y el sistema clínico.
