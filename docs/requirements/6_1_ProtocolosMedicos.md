@@ -11,6 +11,7 @@ El módulo de Protocolos Médicos permite definir conjuntos de servicios clínic
 - **Descripción**
   - El sistema debe permitir crear y administrar protocolos médicos utilizados para evaluaciones ocupacionales o corporativas.
   - Un protocolo agrupa múltiples servicios del catálogo bajo una estructura lógica que representa un tipo de evaluación.
+  - En el contexto de la salud ocupacional, este protocolo también puede denominarse “batería de exámenes”, término comúnmente utilizado por empresas y departamentos de recursos humanos.
   - Ejemplo:
     - Protocolo: Evaluación de ingreso para trabajo en altura
     - Servicios incluidos:
@@ -45,7 +46,30 @@ El módulo de Protocolos Médicos permite definir conjuntos de servicios clínic
       - 2	Rayos X
       - 3	Audiometría
       - 4	Psicología
-- Este orden puede ser utilizado posteriormente por el sistema de agenda médica para optimizar la secuencia de atención.
+  - Este orden puede ser utilizado posteriormente por el sistema de agenda médica para optimizar la secuencia de atención.
+- **Servicios adicionales sugeridos**
+  - Además de los servicios obligatorios del protocolo, el sistema debe permitir definir servicios adicionales sugeridos.
+  - Estos servicios no forman parte del protocolo base, pero pueden ser activados manualmente durante el proceso de admisión o evaluación médica.
+  - Esto permite que el personal de admisión agregue exámenes adicionales según características del trabajador, como:
+    - edad
+    - antecedentes médicos
+    - requerimientos específicos de la empresa.
+- **Servicio de cierre de evaluación**
+  - El sistema debe permitir marcar un servicio dentro del protocolo como servicio de cierre de la evaluación médica.
+  - Este servicio corresponde normalmente a la consulta médica ocupacional, donde el especialista revisa todos los resultados de los exámenes realizados y emite el resultado final de aptitud laboral.
+- `Regla de negocio`
+  - El sistema no debe permitir generar el certificado de aptitud laboral si el servicio de cierre no ha sido completado.
+  - Ejemplo:
+    - Protocolo: Evaluación Minera
+    - Servicios:
+      - Rayos X
+      - Audiometría
+      - Psicología
+      - Consulta médica ocupacional (servicio de cierre)
+  - Solo después de completar el servicio de cierre se podrá registrar:
+    - estado de aptitud
+    - restricciones laborales
+    - certificado ocupacional.
 
 ## 3. Precios por protocolo
 - **Descripción**
