@@ -232,7 +232,58 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
 - **Visualización Crítica:**
     - Este dato debe ser accesible mediante un "Acceso Rápido" en la ficha del paciente, permitiendo que el especialista lo vea sin necesidad de navegar profundamente en la historia clínica.
 
-## 15. Política de Retención y Anonimización (Cumplimiento LPDP)
+## 15. Gestión de Vínculos Familiares
+- **Descripción:**
+    - El sistema debe permitir registrar relaciones familiares entre pacientes registrados dentro de la clínica.
+- Este mecanismo permite representar relaciones familiares que no necesariamente implican tutela legal, pero que pueden ser relevantes para:
+    - beneficios familiares
+    - convenios institucionales extensibles
+    - contacto médico
+    - historial familiar relevante
+    - gestión administrativa.
+- Esta relación es distinta de la relación Responsable → Dependiente, ya que esta última representa una tutela legal o administrativa, mientras que los vínculos familiares representan relaciones personales o familiares entre pacientes.
+- **Tipos de vínculos**
+    - El sistema debe permitir registrar distintos tipos de relación familiar entre pacientes.
+    - Ejemplos:
+        - padre
+        - madre
+        - hijo
+        - cónyuge
+        - tutor (apoderado) legal
+- **Estructura de la relación**
+    - Cada vínculo familiar debe incluir:
+        - paciente origen
+        - paciente relacionado
+        - tipo de relación
+        - estado de la relación
+        - fecha de registro
+- **Reglas de funcionamiento**
+    - Un paciente puede tener múltiples vínculos familiares registrados.
+    - Un vínculo familiar no implica automáticamente autorización médica o legal.
+    - La clínica puede utilizar esta información para:
+        - aplicar beneficios familiares
+        - registrar antecedentes familiares
+        - facilitar procesos administrativos.
+- **Uso en beneficios del sistema**
+    - Los vínculos familiares pueden ser utilizados por otros módulos del sistema para extender beneficios.
+- **Ejemplo:**
+    - Convenio Universidad X
+    - Extensible a familiares directos
+    - Si el paciente titular tiene el convenio, el sistema podrá validar si otro paciente vinculado cumple con la relación familiar requerida.
+- **Tipos de herencia de beneficios**
+    - El sistema debe permitir definir cómo se heredan los beneficios familiares.
+- **Opciones posibles:**
+    - Titular → dependientes
+    - Ejemplo:
+        - Padre tiene convenio
+        - Hijo puede usarlo
+    - Bidireccional
+    - Ejemplo:
+        - Si el hijo tiene beneficio
+        - el padre también puede usarlo
+- La clínica podrá definir la política de herencia según sus reglas administrativas.
+
+## 16. Política de Retención y Anonimización (Cumplimiento LPDP)
 - **Descripción:**
     - Gestión del ciclo de vida de los datos personales frente a la obligatoriedad de la Historia Clínica (HC).
 - **Estado: Anonimizado (Derecho al Olvido):**
@@ -241,7 +292,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
 - **Plazo de Custodia:**
     - El sistema debe permitir configurar el tiempo de retención (ej. 15 años) tras el cual el registro anonimizado puede ser eliminado definitivamente de la base de datos de la clínica.
 
-## 16. Auditoría de Visualización (Read-Only Audit)
+## 17. Auditoría de Visualización (Read-Only Audit)
 - **Descripción:**
     - Registro obligatorio de cada "evento de lectura" de información sensible.
 - **Funcionamiento:**
@@ -251,7 +302,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
 - **Reporte de Intrusión:**
     - El sistema debe facilitar reportes de "Accesos Inusuales" (ej. un personal administrativo consultando muchas historias clínicas en poco tiempo).
 
-## 17. Control de Vigencia de Consentimientos (Versionado)
+## 18. Control de Vigencia de Consentimientos (Versionado)
 - **Descripción:**
     - Mecanismo para asegurar que el paciente siempre esté bajo el marco legal más reciente de la clínica.
 - **Lógica de Versionado:**
