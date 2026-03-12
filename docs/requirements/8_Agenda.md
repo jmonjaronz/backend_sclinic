@@ -1,0 +1,257 @@
+# 📅 Ajustes Importantes al Módulo de Agenda Médica
+## 1. Exclusión de Laboratorio de Rutina
+- **Descripción**
+  - El módulo de Agenda Médica no gestionará citas para exámenes de laboratorio clínico de rutina.
+  - Estos servicios funcionan mediante orden de llegada, donde el paciente presenta su ticket o solicitud en el área de laboratorio.
+- **Excepción**
+  - Los exámenes de laboratorio sí podrán formar parte de una agenda cuando estén incluidos dentro de:
+    - protocolos ocupacionales
+    - evaluaciones médicas estructuradas
+- **Funcionamiento**
+  - En estos casos, el laboratorio se integra como un paso dentro de la ruta clínica del protocolo.
+  - **Ejemplo:**
+    1. Laboratorio
+    2. Rayos X
+    3. Psicología
+    4. Medicina ocupacional
+  - El laboratorio puede funcionar como paso sin horario fijo, pero marcado dentro del flujo del protocolo.
+## 2. Bloqueo Temporal de Horario durante el Agendamiento (Soft Lock)
+- **Descripción**
+  - Cuando un usuario inicia el proceso de agendamiento de una cita, el sistema debe bloquear temporalmente el horario seleccionado para evitar que otro usuario reserve el mismo espacio al mismo tiempo.
+  - Esto previene conflictos entre:
+    - reservas realizadas desde la web
+    - reservas realizadas desde recepción
+    - reservas simultáneas desde diferentes terminales
+- **Funcionamiento del bloqueo temporal**
+  - El usuario selecciona un horario disponible.
+  - El sistema aplica un bloqueo temporal (Soft Lock) sobre ese espacio.
+  - Durante el bloqueo:
+    - ningún otro usuario puede reservar ese mismo horario.
+  - El bloqueo se mantiene por un tiempo limitado.
+- **Ejemplo**
+  - Tiempo de bloqueo: 3 minutos
+  - Si la reserva no se completa dentro del tiempo:
+    - el horario vuelve a liberarse automáticamente.
+## 3. Unificación de Modalidades de Atención (Presencial / Virtual)
+- **Descripción**
+  - Un mismo horario de un especialista no puede ser reservado simultáneamente para dos modalidades distintas.
+  - Cada espacio de agenda representa una única atención médica, independientemente de la modalidad.
+- **Ejemplo de conflicto que el sistema debe evitar**
+  - 10:00 – Dr. Pérez
+    - Paciente A → cita presencial
+    - Paciente B → cita virtual
+  - Esto no debe permitirse, ya que ambos ocupan el mismo tiempo del especialista.
+## 4. Reglas de Reprogramación de Citas
+- **Descripción**
+  - Las clínicas deben poder definir políticas de reprogramación de citas.
+- **Configuración por clínica**
+  - El sistema debe permitir configurar reglas como:
+    - Reprogramación permitida hasta: 48 horas antes
+    - Reprogramación permitida hasta: 24 horas antes
+- **Reprogramación fuera de plazo**
+  - Si se intenta reprogramar fuera del plazo permitido:
+    - el sistema debe bloquear la operación
+    - o requerir autorización administrativa.
+- **Autorización excepcional**
+  - Para permitir reprogramaciones fuera de plazo, el sistema debe soportar mecanismos como:
+    - autorización mediante código de excepción
+    - autorización por usuario supervisor
+    - registro de auditoría obligatoria
+- **Información que debe registrarse**
+  - usuario que solicitó la excepción
+  - usuario que autorizó la excepción
+  - motivo de la autorización
+  - fecha y hora de la operación
+## 5. Cancelaciones de Citas
+- **Descripción**
+  - El sistema debe permitir registrar cancelaciones de citas.
+- **Información de cancelación**
+  - Cada cancelación debe registrar:
+    - motivo de cancelación
+    - usuario que realiza la cancelación
+    - fecha y hora de cancelación
+- **Políticas configurables**
+  - La clínica puede definir reglas como:
+    - Cancelación permitida hasta 24 horas antes
+    - Cancelación libre sin restricción
+## 6. Reservas Pendientes de Pago
+- **Descripción**
+  - El sistema debe permitir crear citas en estado reservado cuando el paciente aún no ha realizado el pago.
+- **Funcionamiento**
+  - Cuando se crea la cita:
+    - Estado: Reserva pendiente
+  - La clínica puede definir un plazo máximo de pago.
+- **Ejemplo**
+  - Tiempo máximo de pago: 48 horas
+  - Si el paciente no paga dentro del plazo:
+    - la reserva se cancela automáticamente
+    - el horario vuelve a quedar disponible.
+- **Estados adicionales de cita**
+  - Esto amplía los estados definidos para la agenda:
+    - Programada
+    - Confirmada
+    - Reserva pendiente de pago
+    - En sala de espera
+    - Cancelada 
+    - No show   
+    - Atendida
+## 7. Auditoría de Cambios en la Agenda
+- **Descripción**
+  - Dado que la agenda es un componente crítico del sistema, se debe registrar auditoría de todas las operaciones importantes.
+- **Acciones que deben auditarse**
+  - creación de citas
+  - modificación de citas
+  - reprogramaciones
+  - cancelaciones
+  - excepciones administrativas
+- **Datos registrados**
+  - usuario
+  - rol
+      - acción realizada
+  - paciente
+  - cita afectada
+  - fecha y hora
+## 8. Flujo de Agendamiento de Citas
+- **Descripción**
+  - El sistema debe proporcionar un flujo guiado de agendamiento, permitiendo a los usuarios seleccionar y reservar citas médicas de forma clara y ordenada.
+  - El flujo puede iniciar desde diferentes puntos de búsqueda:
+    - por especialidad o servicio
+    - por especialista
+  - Esto permite adaptarse a distintos comportamientos de los pacientes.
+## 8.1 Paso 0: Identificación del Paciente y Beneficios
+- **Descripción**
+  - Antes de mostrar los horarios disponibles, el sistema puede solicitar la identificación del paciente o beneficios aplicables.
+  - Esto permite calcular correctamente:
+    - duración de la cita
+    - disponibilidad real
+    - copago estimado
+- **Ejemplo**
+  - El paciente puede indicar:
+    - Paciente registrado
+    - Seguro / EPS
+    - Convenio institucional
+    - Código promocional (opcional)
+  - Esto permite ajustar condiciones como:
+    - Consulta particular → 20 minutos
+    - Consulta por seguro → 30 minutos
+## 8.2 Agendamiento iniciando por Servicio o Especialidad
+- **Descripción**
+  - Este es el flujo más común cuando el paciente no tiene un médico específico en mente.
+- **Paso 1: Selección del servicio o especialidad**
+  - El usuario puede seleccionar:
+    - Medicina General
+    - Cardiología
+    - Consulta psicológica
+- **Paso 2: Selección de sede**
+  - Una vez seleccionado el servicio, el sistema debe mostrar las sedes donde ese servicio está disponible.
+- **Ejemplo**
+  - Sede Centro
+  - Sede Norte
+  - Sede Sur
+- **Paso 3: Selección de especialista**
+  - El sistema muestra los especialistas disponibles para ese servicio en la sede seleccionada.
+- **Paso 4: Selección de modalidad**
+  - El usuario debe elegir la modalidad de atención disponible:
+    - Presencial
+    - Virtual
+- **Paso 5: Selección de fecha**
+  - El sistema muestra únicamente los días donde existe disponibilidad del especialista.
+- **Paso 6: Selección de horario**
+  - Los horarios disponibles dependen de:
+    - disponibilidad del especialista
+    - duración del servicio
+    - disponibilidad de consultorio
+    - bloqueos administrativos
+    - reservas activas
+## 8.3 Sugerencias de horarios cercanos
+- **Descripción**
+  - Para mejorar la experiencia del usuario, el sistema debe mostrar horarios alternativos cercanos cuando el horario seleccionado no esté disponible.
+- **Ejemplo**
+  - Hoy: sin disponibilidad
+  - Sugerencias próximas:
+    - Martes 10:20
+    - Miércoles 08:40
+    - Jueves 11:00
+- **Configuración del rango de sugerencias**
+  - La clínica puede configurar el rango de búsqueda de horarios alternativos.
+- **Ejemplo**
+  - Mostrar horarios disponibles en los próximos:
+    - 7 días
+    - 14 días
+## 8.4 Agendamiento iniciando por Especialista
+- **Descripción**
+  - Este flujo se utiliza cuando el paciente ya conoce al médico con quien desea atenderse.
+- **Paso 1: Selección de especialista**
+  - El usuario busca o selecciona al especialista.
+- **Paso 2: Selección de servicio**
+  - Si el especialista ofrece más de un servicio, el sistema solicita seleccionar cuál desea.
+- **Ejemplo**
+  - Consulta general
+  - Control médico
+  - Evaluación ocupacional
+- **Paso 3: Selección de sede**
+  - El sistema muestra las sedes donde el especialista atiende.
+  - Si el especialista trabaja en una sola sede, esta se selecciona automáticamente.
+- **Paso 4: Selección de modalidad**
+  - El usuario selecciona:
+    - Presencial
+    - Virtual
+- **Paso 5: Selección de fecha**
+  - El sistema muestra únicamente días disponibles según la agenda del especialista.
+- **Paso 6: Selección de horario**
+  - Los horarios disponibles consideran:
+    - disponibilidad del especialista
+    - duración del servicio
+    - bloqueos de agenda
+    - reservas activas
+- **Integración con Soft Lock**
+  - Una vez seleccionado el horario, el sistema aplica el bloqueo temporal (Soft Lock) definido anteriormente para evitar conflictos de agendamiento.
+## 9. Agendamiento desde Atención Médica (Citas de Seguimiento)
+- **Descripción**
+  - Después de una consulta, el especialista puede proponer una cita de seguimiento para el paciente.
+- **Estado de la cita**
+  - El sistema genera una cita en estado:
+    - Propuesta por especialista
+- **Acciones del paciente**
+  - El paciente debe:
+    - confirmar la cita
+    - realizar el pago si corresponde
+## 10. Planes de Sesiones o Tratamientos
+- **Descripción**
+  - Algunos servicios requieren múltiples sesiones.
+- **Ejemplo**
+  - Psicoterapia
+    - 5 sesiones
+    - 1 sesión por semana
+- **Generación del plan**
+  - El especialista puede generar un plan de sesiones.
+  - El sistema crea las citas sugeridas.
+- **Confirmación flexible por el paciente**
+  - El paciente puede:
+    - confirmar todas las sesiones
+    - confirmar solo algunas sesiones
+    - modificar fechas sugeridas
+- **Pago parcial**
+  - El paciente puede pagar únicamente algunas sesiones.
+- **Ejemplo**
+  - Total sesiones: 5
+  - Pagadas: 3
+  - Pendientes: 2
+## 11. Agendamiento Múltiple de Citas
+- **Descripción**
+  - El sistema debe permitir que el paciente reserve múltiples citas del mismo servicio en un solo proceso.
+- **Ejemplo**
+  - Terapia física
+    - Lunes
+    - Miércoles
+    - Viernes
+- **Beneficio**
+  - Esto evita repetir el proceso de agendamiento varias veces.
+## 12. Restricciones Clínicas entre Citas
+- **Descripción**
+  - El sistema debe aplicar restricciones clínicas entre citas del mismo paciente.
+- **Ejemplo**
+  - Después de una consulta de odontología:
+    - No se puede agendar otra consulta odontológica en el mismo día.
+- **Configuración**
+  - La clínica puede configurar estas restricciones según especialidad.
