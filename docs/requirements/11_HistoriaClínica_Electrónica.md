@@ -1,0 +1,173 @@
+# 📑 Módulo: Historia Clínica Electrónica (HCE)
+- **Descripción General**
+    - La Historia Clínica Electrónica (HCE) permite registrar, almacenar y consultar la información médica generada durante la atención de un paciente.
+    - El sistema debe basarse en una arquitectura modular, permitiendo adaptar el formulario clínico según:
+      - especialidad médica
+      - tipo de consulta
+      - protocolos ocupacionales
+      - configuraciones propias de cada clínica
+    - La HCE debe combinar:
+      - secciones obligatorias ("Core")
+      - secciones configurables ("Dinámicas")
+    - Esto permite mantener el cumplimiento normativo sin limitar la flexibilidad clínica.
+
+## 1. Arquitectura Modular de la Consulta
+- El sistema no debe utilizar un único formulario fijo.
+- En su lugar, debe existir un constructor de plantillas clínicas, donde cada especialidad tenga su propia estructura de consulta.
+### 1.1 Secciones Base (Core Clínico)
+- Estas secciones forman parte del registro médico básico y deben estar disponibles en todas las consultas.
+- Motivo de Consulta
+    - Campo de texto donde se registra el motivo principal de la atención según lo expresado por el paciente.
+    - Ejemplo:
+        - Dolor abdominal desde hace tres días
+        - Dolor lumbar posterior a esfuerzo físico
+        - Control de hipertensión
+- Antecedentes
+    - El sistema debe mostrar automáticamente antecedentes relevantes del paciente registrados en consultas previas.
+    - Ejemplo:
+        - Alergias
+        - Enfermedades crónicas
+        - Cirugías previas
+    - Tratamientos actuales
+    - Estos datos deben mantenerse persistentes dentro de la historia clínica.
+- Examen físico
+    - Registro del examen clínico realizado por el médico.
+    - Puede organizarse de diferentes maneras:
+        - por sistemas (cabeza, tórax, abdomen)
+        - por especialidad
+        - campo general libre
+    - La estructura puede variar según la plantilla utilizada.
+- Diagnóstico
+    - Registro del diagnóstico clínico mediante estándares internacionales.
+    - El sistema debe soportar:
+        - CIE-10
+        - CIE-11
+    - Debe incluir un buscador inteligente con autocompletado.
+- Plan de tratamiento
+    - Sección donde el médico registra las acciones clínicas a seguir.
+    - Ejemplo:
+        - medicación
+        - exámenes solicitados
+        - indicaciones médicas
+        - derivaciones
+
+## 2. Motor de Autocompletado y Plantillas Rápidas
+- Para reducir el tiempo de registro clínico, el sistema debe ofrecer herramientas de escritura asistida.
+- Frases predefinidas
+    - El médico puede utilizar comandos para expandir texto automáticamente.
+    - Ejemplo:
+        - /normal
+        - Se expande a:
+            - Paciente orientado en tiempo, espacio y persona.
+            - Abdomen blando, depresible, ruidos hidroaéreos presentes.
+- Plantillas por especialidad
+    - Cada especialidad puede tener campos específicos.
+    - Ejemplo:
+        - Oftalmología
+            - Agudeza visual
+            - Tonometría
+            - Fondo de ojo
+        - Traumatología
+            - Movilidad articular
+            - Dolor a la palpación
+            - Limitación funcional
+- Copiado de última atención
+    - El sistema debe permitir copiar información de la consulta anterior del paciente.
+    - Esto es útil para:
+        - seguimiento de enfermedades crónicas
+        - controles periódicos
+        - tratamientos prolongados
+    - El médico puede modificar solo los cambios relevantes.
+
+## 3. Diagnósticos con Búsqueda Inteligente
+- El sistema debe facilitar la selección de diagnósticos clínicos mediante búsqueda avanzada.
+- Búsqueda semántica
+    - El sistema debe permitir encontrar diagnósticos usando términos comunes.
+    - Ejemplo:
+        - búsqueda: gripe
+        - Sugerencia:
+            - J11.1 Influenza con manifestaciones respiratorias
+- Favoritos del médico
+    - El sistema debe aprender los diagnósticos más utilizados por cada especialista y mostrarlos primero.
+    - Ejemplo:
+        - Hipertensión esencial
+        - Diabetes tipo 2
+        - Infección respiratoria alta
+
+## 4. Gestión de Órdenes Médicas y Recetas
+- La HCE debe permitir generar órdenes clínicas directamente desde la consulta.
+- Recetario digital
+    - El sistema debe ofrecer un buscador de medicamentos.
+    - Cada medicamento puede incluir:
+        - dosis
+        - frecuencia
+        - vía de administración
+        - duración del tratamiento
+    - Si existe un módulo de farmacia, la receta debe conectarse con el catálogo de medicamentos.
+- Órdenes de exámenes
+    - El médico debe poder solicitar exámenes desde la misma consulta.
+    - Ejemplo:
+        - laboratorio
+        - rayos X
+        - ecografía
+        - tomografía
+    - El sistema genera automáticamente la orden correspondiente.
+- Interconsultas
+    - Permite derivar al paciente a otro especialista dentro de la misma clínica.
+    - Ejemplo:
+        - derivación a cardiología
+        - derivación a nutrición
+        - derivación a fisioterapia
+
+## 5. Modo Especial: Evaluaciones Ocupacionales
+- Cuando el tipo de atención es evaluación ocupacional, la HCE debe cambiar su estructura.
+- Modo protocolo
+    - El sistema muestra únicamente los campos definidos por la normativa de salud ocupacional.
+    - Ejemplo:
+        - evaluación musculoesquelética
+        - evaluación respiratoria
+        - evaluación visual
+- Visualización de resultados
+    - El médico debe poder visualizar resultados de otros exámenes dentro de la misma pantalla.
+    - Ejemplo:
+        - resultados de laboratorio
+        - imágenes de rayos X
+        - informes psicológicos
+    - Esto permite tomar decisiones médicas sin cambiar de pantalla.
+- Evaluación de aptitud
+    - Al finalizar la evaluación ocupacional se habilita la decisión de aptitud laboral.
+    - Ejemplo:
+        - Apto
+        - Apto con restricciones
+        - No apto
+
+## 6. Firma y Cierre del Acto Médico
+- La consulta médica debe tener un mecanismo formal de cierre.
+- Bloqueo de edición
+    - Una vez finalizada la consulta, el registro clínico queda bloqueado para evitar modificaciones posteriores.
+    - Cualquier cambio posterior debe realizarse mediante:
+        - nota de evolución
+        - adenda clínica
+    - Esto garantiza la integridad legal del registro médico.
+- Firma digital
+    - El sistema debe permitir firmar electrónicamente la consulta médica.
+    - La firma puede aplicarse a:
+        - historia clínica
+        - recetas médicas
+        - informes clínicos
+        - certificados médicos
+    - El sistema debe poder integrarse con certificados digitales para garantizar validez legal.
+
+## 7. Secciones Personalizadas
+- El sistema debe permitir a los administradores crear campos personalizados sin necesidad de programación.
+- Tipos de campos posibles:
+    - campo de texto
+    - checkbox
+    - lista desplegable
+    - campo numérico
+    - fecha
+- Estas secciones pueden asignarse a:
+    - especialidades
+    - servicios
+    - tipos de consulta
+- Esto permite adaptar el sistema a diferentes clínicas.
