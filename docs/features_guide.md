@@ -1,4 +1,4 @@
-# Guía de Funcionalidades - SCLINIC
+# Guía de Funcionalidades - SCLINIC (ACTUALIZAR)
 
 Resumen de las capacidades actuales de la plataforma.
 

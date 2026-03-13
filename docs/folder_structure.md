@@ -1,4 +1,4 @@
-# Estructura de Carpetas - SCLINIC
+# Estructura de Carpetas - SCLINIC (ACTUALIZAR)
 
 El proyecto SCLINIC sigue una arquitectura **orientada a dominios**, donde cada funcionalidad principal reside en su propia aplicación Django. Esto facilita el mantenimiento y la escalabilidad del sistema SaaS.
 

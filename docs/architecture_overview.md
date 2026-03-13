@@ -1,4 +1,4 @@
-# Arquitectura del Sistema - SCLINIC
+# Arquitectura del Sistema - SCLINIC (ACTUALIZAR)
 
 SCLINIC es una plataforma SaaS multi-tenant diseñada para la gestión de clínicas de salud ocupacional, psicología y medicina general.
 

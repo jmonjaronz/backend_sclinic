@@ -1,4 +1,4 @@
-# Reglas de Negocio - SCLINIC
+# Reglas de Negocio - SCLINIC (ACTUALIZAR)
 
 Este documento detalla la lógica central que rige el comportamiento de la plataforma SCLINIC.
 
