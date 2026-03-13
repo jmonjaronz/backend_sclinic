@@ -16,13 +16,13 @@
 - En su lugar, debe existir un constructor de plantillas clínicas, donde cada especialidad tenga su propia estructura de consulta.
 ### 1.1 Secciones Base (Core Clínico)
 - Estas secciones forman parte del registro médico básico y deben estar disponibles en todas las consultas.
-- Motivo de Consulta
+- **Motivo de Consulta**
     - Campo de texto donde se registra el motivo principal de la atención según lo expresado por el paciente.
     - Ejemplo:
         - Dolor abdominal desde hace tres días
         - Dolor lumbar posterior a esfuerzo físico
         - Control de hipertensión
-- Antecedentes
+- **Antecedentes**
     - El sistema debe mostrar automáticamente antecedentes relevantes del paciente registrados en consultas previas.
     - Ejemplo:
         - Alergias
@@ -30,20 +30,33 @@
         - Cirugías previas
     - Tratamientos actuales
     - Estos datos deben mantenerse persistentes dentro de la historia clínica.
-- Examen físico
+- **Trazabilidad de antecedentes (Timeline clínico)**
+    - Los antecedentes no deben mostrarse únicamente como una lista estática.
+    - Cada antecedente debe registrar información de trazabilidad clínica.
+    - Ejemplo:
+        - Alergia: Penicilina
+        - Registrado: 12/03/2024
+        - Registrado por: Dr. Pérez
+        - Consulta: Emergencia
+    - El sistema debe permitir que el médico pueda:
+        - visualizar la nota médica original donde se registró el antecedente
+        - ver el contexto clínico en el que fue registrado
+        - consultar la atención médica asociada
+    - Esto permite mejorar la trazabilidad clínica y reducir errores médicos.
+- **Examen físico**
     - Registro del examen clínico realizado por el médico.
     - Puede organizarse de diferentes maneras:
         - por sistemas (cabeza, tórax, abdomen)
         - por especialidad
         - campo general libre
     - La estructura puede variar según la plantilla utilizada.
-- Diagnóstico
+- **Diagnóstico**
     - Registro del diagnóstico clínico mediante estándares internacionales.
     - El sistema debe soportar:
         - CIE-10
         - CIE-11
     - Debe incluir un buscador inteligente con autocompletado.
-- Plan de tratamiento
+- **Plan de tratamiento**
     - Sección donde el médico registra las acciones clínicas a seguir.
     - Ejemplo:
         - medicación
@@ -53,14 +66,14 @@
 
 ## 2. Motor de Autocompletado y Plantillas Rápidas
 - Para reducir el tiempo de registro clínico, el sistema debe ofrecer herramientas de escritura asistida.
-- Frases predefinidas
+- **Frases predefinidas**
     - El médico puede utilizar comandos para expandir texto automáticamente.
     - Ejemplo:
         - /normal
         - Se expande a:
             - Paciente orientado en tiempo, espacio y persona.
             - Abdomen blando, depresible, ruidos hidroaéreos presentes.
-- Plantillas por especialidad
+- **Plantillas por especialidad**
     - Cada especialidad puede tener campos específicos.
     - Ejemplo:
         - Oftalmología
@@ -71,7 +84,7 @@
             - Movilidad articular
             - Dolor a la palpación
             - Limitación funcional
-- Copiado de última atención
+- **Copiado de última atención**
     - El sistema debe permitir copiar información de la consulta anterior del paciente.
     - Esto es útil para:
         - seguimiento de enfermedades crónicas
@@ -81,22 +94,43 @@
 
 ## 3. Diagnósticos con Búsqueda Inteligente
 - El sistema debe facilitar la selección de diagnósticos clínicos mediante búsqueda avanzada.
-- Búsqueda semántica
+- **Búsqueda semántica**
     - El sistema debe permitir encontrar diagnósticos usando términos comunes.
     - Ejemplo:
         - búsqueda: gripe
         - Sugerencia:
             - J11.1 Influenza con manifestaciones respiratorias
-- Favoritos del médico
+- **Favoritos del médico**
     - El sistema debe aprender los diagnósticos más utilizados por cada especialista y mostrarlos primero.
     - Ejemplo:
         - Hipertensión esencial
         - Diabetes tipo 2
         - Infección respiratoria alta
+- **Aprendizaje de preferencias**
+    - El sistema debe registrar los diagnósticos más utilizados por cada médico para mostrarlos como sugerencias prioritarias.
+    - Esto permite reducir el tiempo de búsqueda durante la consulta.
+- **Diccionario de equivalencias médicas**
+    - El sistema debe contar con un diccionario de equivalencias que permita identificar diagnósticos mediante distintos términos utilizados por los médicos.
+    - El diccionario debe contemplar:
+        - términos coloquiales
+        - epónimos médicos
+        - sinónimos clínicos
+        - denominación oficial del CIE
+    - Ejemplo:
+        - Búsqueda:
+            - gripe
+        - Resultado:
+            - J11.1 Influenza con manifestaciones respiratorias
+    - Otro ejemplo:
+        - Búsqueda:
+            - Enfermedad de Graves
+        - Resultado:
+            - E05.0 Hipertiroidismo con bocio difuso
+    - Esto permite que el sistema facilite la selección correcta de diagnósticos clínicos.
 
 ## 4. Gestión de Órdenes Médicas y Recetas
 - La HCE debe permitir generar órdenes clínicas directamente desde la consulta.
-- Recetario digital
+- **Recetario digital**
     - El sistema debe ofrecer un buscador de medicamentos.
     - Cada medicamento puede incluir:
         - dosis
@@ -104,7 +138,7 @@
         - vía de administración
         - duración del tratamiento
     - Si existe un módulo de farmacia, la receta debe conectarse con el catálogo de medicamentos.
-- Órdenes de exámenes
+- **Órdenes de exámenes**
     - El médico debe poder solicitar exámenes desde la misma consulta.
     - Ejemplo:
         - laboratorio
@@ -112,55 +146,141 @@
         - ecografía
         - tomografía
     - El sistema genera automáticamente la orden correspondiente.
-- Interconsultas
+- **Interconsultas**
     - Permite derivar al paciente a otro especialista dentro de la misma clínica.
     - Ejemplo:
         - derivación a cardiología
         - derivación a nutrición
         - derivación a fisioterapia
+- **Validación de contraindicaciones**
+    - Antes de confirmar una receta médica, el sistema debe validar automáticamente posibles riesgos clínicos.
+    - **Cruce con alergias**
+        - Si el sistema detecta que el paciente tiene una alergia registrada relacionada con el medicamento prescrito, debe mostrar una alerta.
+        - Ejemplo:
+            - Paciente:
+                - Alergia: Penicilina
+            - Medicamento prescrito:
+                - Amoxicilina
+            - Alerta del sistema:
+                - ⚠ ALERTA DE SEGURIDAD
+                - El paciente tiene alergia registrada a Penicilina.
+                - Medicamento prescrito: Amoxicilina
+                - Riesgo de reacción alérgica.
+                - Opciones:
+                    - Cancelar receta
+                    - Continuar con justificación médica
+    - **Cruce con enfermedades crónicas**
+        - El sistema también debe validar contraindicaciones relacionadas con enfermedades del paciente.
+        - Ejemplo:
+            - Paciente con:
+                - Insuficiencia renal
+            - El sistema debe advertir si el medicamento no es recomendable para dicha condición.
 
 ## 5. Modo Especial: Evaluaciones Ocupacionales
 - Cuando el tipo de atención es evaluación ocupacional, la HCE debe cambiar su estructura.
-- Modo protocolo
+- **Modo protocolo**
     - El sistema muestra únicamente los campos definidos por la normativa de salud ocupacional.
     - Ejemplo:
         - evaluación musculoesquelética
         - evaluación respiratoria
         - evaluación visual
-- Visualización de resultados
+- **Visualización de resultados**
     - El médico debe poder visualizar resultados de otros exámenes dentro de la misma pantalla.
     - Ejemplo:
         - resultados de laboratorio
         - imágenes de rayos X
         - informes psicológicos
     - Esto permite tomar decisiones médicas sin cambiar de pantalla.
-- Evaluación de aptitud
+- **Evaluación de aptitud**
     - Al finalizar la evaluación ocupacional se habilita la decisión de aptitud laboral.
     - Ejemplo:
         - Apto
         - Apto con restricciones
         - No apto
+- **Indicadores de valores críticos**
+    - Cuando el sistema muestre resultados clínicos dentro de la consulta, debe identificar automáticamente valores fuera de rango o críticos.
+    - Estos valores deben mostrarse con indicadores visuales destacados.
+    - Ejemplo:
+        - Hemoglobina: 6.8 g/dL   ⚠ CRÍTICO
+        - Glucosa: 280 mg/dL      ⚠ ALTO
+        - Creatinina: 1.1 mg/dL   Normal
+    - Los valores críticos deben resaltarse mediante:
+        - color rojo
+        - iconos de alerta
+        - etiquetas de advertencia
+    - Esto permite que el médico identifique rápidamente resultados que requieren atención inmediata sin revisar el informe completo.
+- **Vista clínica integrada**
+    - Durante la consulta médica, el sistema debe permitir visualizar información clínica relevante sin necesidad de cambiar de módulo.
+    - La interfaz puede presentar una vista dividida entre la historia clínica y los resultados disponibles.
+    -  Ejemplo conceptual:
+        ------------------------------------------------
+        | HISTORIA CLÍNICA | RESULTADOS |
+        ------------------------------------------------
+        | Motivo consulta  | Laboratorio |
+        | Examen físico    | Rayos X     |
+        | Diagnóstico      | Audiometría |
+        | Tratamiento      | Espirometría|
+        ------------------------------------------------
+    - Esto permite al médico consultar resultados mientras registra la evaluación clínica.
 
 ## 6. Firma y Cierre del Acto Médico
 - La consulta médica debe tener un mecanismo formal de cierre.
-- Bloqueo de edición
+- **Bloqueo de edición**
     - Una vez finalizada la consulta, el registro clínico queda bloqueado para evitar modificaciones posteriores.
     - Cualquier cambio posterior debe realizarse mediante:
         - nota de evolución
         - adenda clínica
     - Esto garantiza la integridad legal del registro médico.
-- Firma digital
-    - El sistema debe permitir firmar electrónicamente la consulta médica.
-    - La firma puede aplicarse a:
-        - historia clínica
-        - recetas médicas
-        - informes clínicos
-        - certificados médicos
-    - El sistema debe poder integrarse con certificados digitales para garantizar validez legal.
+- **Tipos de firma soportados**
+    - El sistema debe permitir diferentes tipos de firma para adaptarse a los requerimientos legales y operativos de la clínica.
+    - **Firma electrónica**
+        - Se utiliza para validaciones internas dentro del sistema.
+        - Puede realizarse mediante:
+            - usuario y contraseña
+            - PIN médico
+            - autenticación dentro del sistema
+        - Esta firma permite registrar el cierre de la consulta dentro del sistema clínico.
+    - **Firma digital**
+        - Debe permitir la integración con certificados digitales emitidos por entidades autorizadas.
+        - Ejemplos:
+            - certificados digitales reconocidos por autoridades regulatorias
+            - firma compatible con validación legal de documentos electrónicos
+        - Esto permite que documentos generados por el sistema tengan validez legal externa, tales como:
+            - recetas médicas
+            - informes clínicos
+            - certificados médicos
+        - En Perú esto es importante para cumplimiento regulatorio.
+- **Registro de auditoría clínica**
+    - El sistema debe mantener un registro de auditoría de todas las acciones realizadas sobre la historia clínica.
+    - Debe registrar:
+        - usuario que creó el registro
+        - fecha y hora de creación
+        - modificaciones realizadas
+        - fecha y hora de firma
+        - creación de adendas o notas de evolución
+    - Ejemplo:
+        - Consulta creada:
+            - Dr. Martínez
+            - 12/06/2026 - 09:42
+        - Firmada digitalmente:
+            - 12/06/2026 - 09:51
+        - Adenda agregada:
+            - 13/06/2026 - 10:20
+    - Esto garantiza la integridad legal de la historia clínica.
+- **Protección del registro clínico**
+    - Una vez firmada la consulta médica, el registro debe quedar bloqueado para evitar modificaciones posteriores.
+    - Cualquier cambio posterior debe registrarse mediante:
+        - nota de evolución
+        - adenda clínica
+    - Estas modificaciones deben mantener la información original intacta y registrar:
+        - usuario que realizó la modificación
+        - fecha y hora del cambio
+        - motivo de la modificación
+    - Esto garantiza la integridad legal de la historia clínica ante auditorías regulatorias.
 
 ## 7. Secciones Personalizadas
 - El sistema debe permitir a los administradores crear campos personalizados sin necesidad de programación.
-- Tipos de campos posibles:
+- **Tipos de campos posibles**:
     - campo de texto
     - checkbox
     - lista desplegable
