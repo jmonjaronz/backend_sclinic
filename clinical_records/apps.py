@@ -5,4 +5,4 @@ class ClinicalRecordsConfig(AppConfig):
     name = 'clinical_records'
 
     def ready(self):
-        import clinical_records.signals
+        import clinical_records.signals  # noqa: F401

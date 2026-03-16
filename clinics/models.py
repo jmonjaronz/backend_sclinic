@@ -1,113 +1,176 @@
 from django.db import models
 import uuid
+from django.conf import settings
+from core.models import Clinic, ClinicAwareModel
 
-class Clinic(models.Model):
+
+class Headquarters(ClinicAwareModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
-    subdomain = models.SlugField(unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
-    
-    # Configuración SaaS
-    min_booking_days_notice = models.IntegerField(default=1, help_text="Días mínimos de anticipación para agendar.")
-    
-    # Reglas de pago
-    payment_required_before = models.BooleanField(default=True, help_text="¿Requiere pago previo para confirmar la cita?")
-    payment_grace_period_days = models.IntegerField(default=1, help_text="Días antes de la cita para pagar si es requerido.")
-
-    # Reglas de Reprogramación y Anulación
-    max_reschedules_allowed = models.IntegerField(default=2, help_text="Límite de veces que se puede reprogramar una cita.")
-    reschedule_notice_hours = models.IntegerField(default=24, help_text="Horas mínimas de anticipación para reprogramar.")
-    cancel_notice_hours = models.IntegerField(default=24, help_text="Horas mínimas de anticipación para anular.")
-
-    # Reglas Médicas
-    requires_triage_before_appointment = models.BooleanField(default=False, help_text="¿Obliga a pasar por triaje antes de la consulta médica?")
-
-    def __str__(self):
-        return self.name
-
-class Headquarters(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='headquarters')
     name = models.CharField(max_length=255)
     address = models.TextField()
     city = models.CharField(max_length=100)
-    
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    is_active = models.BooleanField(default=True)
+
     def __str__(self):
         return f"{self.name} - {self.clinic.name}"
 
-class Specialty(models.Model):
+
+class Specialty(ClinicAwareModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='specialties')
     name = models.CharField(max_length=100)
-    
+
     class Meta:
         verbose_name_plural = "Specialties"
 
     def __str__(self):
         return f"{self.name} ({self.clinic.name})"
 
-class Service(models.Model):
+
+class Service(ClinicAwareModel):
+    """
+    Medical service from the clinic catalog.
+    Req: 5_CatalogoServicios.md
+    """
     class ServiceType(models.TextChoices):
-        B2B = 'B2B', 'Bambú B2B'
-        WELLNESS = 'WELLNESS', 'Bambú Bienestar'
+        B2B = 'B2B', 'Corporativo B2B'
+        WELLNESS = 'WELLNESS', 'Bienestar'
         OCCUPATIONAL = 'OCCUPATIONAL', 'Salud Ocupacional'
         EMERGENCY = 'EMERGENCY', 'Emergencias'
         HOSPITALIZATION = 'HOSPITALIZATION', 'Hospitalización'
+        GENERAL = 'GENERAL', 'Consulta General'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='services')
     specialty = models.ForeignKey(Specialty, on_delete=models.CASCADE, related_name='services')
-    name = models.CharField(max_length=255) # Ej: Consulta Psicológica
-    internal_name = models.CharField(max_length=255, blank=True) # Ej: Psicoterapia
-    service_type = models.CharField(max_length=20, choices=ServiceType.choices)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    duration_minutes = models.IntegerField(default=60)
+    name = models.CharField(max_length=255)
+    internal_name = models.CharField(max_length=255, blank=True)
+    service_type = models.CharField(max_length=20, choices=ServiceType.choices, default=ServiceType.GENERAL)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    # Duración y capacidad (5_CatalogoServicios.md)
+    duration_minutes = models.PositiveIntegerField(default=30, help_text="Duración base de la consulta en minutos.")
+    buffer_minutes = models.PositiveIntegerField(default=5, help_text="Minutos de buffer entre citas.")
+    max_patients = models.PositiveIntegerField(default=1, help_text="Capacidad máxima de pacientes por cita (1=individual, >1=grupal).")
+
+    # Instrucciones y requerimientos
+    preparation_instructions = models.TextField(blank=True, help_text="Instrucciones previas para el paciente (ej: asistir en ayunas).")
+    cancel_notice_hours = models.PositiveIntegerField(default=24, help_text="Horas mínimas de anticipacion para cancelar sin penalidad.")
+
+    # Reglas clínicas
+    requires_triage = models.BooleanField(default=False, help_text="Si True, el paciente pasa por Triaje antes de la consulta.")
     is_simultaneous = models.BooleanField(default=False)
-    max_capacity = models.IntegerField(default=1) # Para talleres o evaluaciones presenciales
-    is_confidential_to_patient = models.BooleanField(default=False, help_text="Si es True, el paciente no podrá ver los resultados (ej: pre-empleo).")
+    is_confidential_to_patient = models.BooleanField(default=False, help_text="Si True, el paciente no puede ver los resultados (ej: pre-empleo).")
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.name} - {self.clinic.name}"
 
-class Specialist(models.Model):
+
+class Specialist(ClinicAwareModel):
+    """
+    Specialist professional profile. Req: 4_Especialistas.md
+    """
+    class SpecialistType(models.TextChoices):
+        INTERNAL = 'INTERNAL', 'Interno'
+        EXTERNAL = 'EXTERNAL', 'Externo'
+        AGREEMENT = 'AGREEMENT', 'Por Convenio'
+
+    class SpecialistStatus(models.TextChoices):
+        ACTIVE = 'ACTIVE', 'Activo'
+        INACTIVE = 'INACTIVE', 'Inactivo (ya no atiende)'
+        SUSPENDED = 'SUSPENDED', 'Suspendido'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='specialists')
     user = models.OneToOneField('users.User', on_delete=models.CASCADE, related_name='specialist_profile')
     specialties = models.ManyToManyField(Specialty, related_name='specialists')
+    services = models.ManyToManyField(Service, blank=True, related_name='authorized_specialists', help_text="Servicios que este especialista está autorizado a brindar.")
+
+    # Datos profesionales (4_Especialistas.md)
+    specialist_type = models.CharField(max_length=20, choices=SpecialistType.choices, default=SpecialistType.INTERNAL)
+    status = models.CharField(max_length=20, choices=SpecialistStatus.choices, default=SpecialistStatus.ACTIVE)
+    license_number = models.CharField(max_length=50, blank=True, help_text="Número de colegiatura profesional.")
+    professional_college = models.CharField(max_length=100, blank=True, help_text="Colegio profesional (ej: CMP, CPSP).")
+    sub_specialty = models.CharField(max_length=100, blank=True, help_text="Subespecialidad (ej: Cardiología).")
+    years_of_experience = models.PositiveIntegerField(null=True, blank=True)
+
+    # Perfil público (visible para pacientes)
     bio = models.TextField(blank=True)
-    
+    photo = models.ImageField(upload_to='specialist_photos/', null=True, blank=True)
+    languages = models.CharField(max_length=255, blank=True, help_text="Idiomas que habla el especialista.")
+    keywords = models.CharField(max_length=500, blank=True, help_text="Palabras clave o áreas de especialización.")
+
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.clinic.name})"
 
+
 class SpecialistSchedule(models.Model):
     """
-    Weekly base schedule for a specialist (Positive availability).
+    Weekly base schedule for a specialist.
     """
+    class Modality(models.TextChoices):
+        PRESENTIAL = 'PRESENTIAL', 'Presencial'
+        VIRTUAL = 'VIRTUAL', 'Virtual'
+        BOTH = 'BOTH', 'Ambas'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='schedules')
-    
-    # 0=Lunes, 6=Domingo
-    day_of_week = models.IntegerField(choices=[(i, str(i)) for i in range(7)])
+    headquarters = models.ForeignKey(Headquarters, on_delete=models.CASCADE, null=True, blank=True, related_name='schedules')
+
+    day_of_week = models.IntegerField(choices=[(i, str(i)) for i in range(7)], help_text="0=Lunes, 6=Domingo")
     start_time = models.TimeField()
     end_time = models.TimeField()
-    
+    modality = models.CharField(max_length=15, choices=Modality.choices, default=Modality.PRESENTIAL)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.specialist} - Día {self.day_of_week} ({self.start_time}-{self.end_time})"
 
+
+class SpecialistBlock(models.Model):
+    """
+    Exception block on a specialist's schedule (vacations, sick leave, meetings).
+    Req: 4_Especialistas.md sec. 6 - Gestión de Bloqueos y Excepciones.
+    """
+    class BlockType(models.TextChoices):
+        VACATION = 'VACATION', 'Vacaciones / Licencia'
+        PERSONAL = 'PERSONAL', 'Asunto Personal'
+        MEETING = 'MEETING', 'Reunión Interna'
+        TRAINING = 'TRAINING', 'Capacitación / Congreso'
+        OTHER = 'OTHER', 'Otro'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='specialist_blocks')
+    block_type = models.CharField(max_length=20, choices=BlockType.choices)
+    reason = models.CharField(max_length=255, blank=True)
+
+    # Alcance del bloqueo (puede ser todo el día o un rango de horas)
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
+    affects_all_headquarters = models.BooleanField(default=True)
+    headquarters = models.ForeignKey(Headquarters, on_delete=models.CASCADE, null=True, blank=True)
+
+    # Auditoría
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_blocks')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Bloqueo {self.specialist}: {self.start_datetime} - {self.end_datetime}"
+
+
 class SubscriptionPlan(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100) # Ej: Básico, Premium, Ocupacional Pro
+    name = models.CharField(max_length=100)
     price_monthly = models.DecimalField(max_digits=10, decimal_places=2)
     max_appointments_month = models.IntegerField(default=100)
     max_specialists = models.IntegerField(default=5)
-    features = models.JSONField(default=dict, help_text="Configuración de módulos activos (ej: psychological_tests: true)")
+    max_headquarters = models.IntegerField(default=1)
+    features = models.JSONField(default=dict, help_text="Configuración de módulos activos")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
+
 
 class Subscription(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -116,33 +179,70 @@ class Subscription(models.Model):
     start_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    
+
     def __str__(self):
         return f"{self.clinic.name} - {self.plan.name}"
+
 
 class Room(models.Model):
     class RoomType(models.TextChoices):
         GENERAL = 'GENERAL', 'Cuidado General'
-        ICU = 'ICU', 'Unidad de Cuidados Intensivos (UCI)'
+        ICU = 'ICU', 'Unidad de Cuidados Intensivos'
         EMERGENCY = 'EMERGENCY', 'Box de Emergencias'
-        SURGICAL = 'SURGICAL', 'Quirófano / Recuperación'
+        SURGICAL = 'SURGICAL', 'Quirófano'
+        CONSULTATION = 'CONSULTATION', 'Consultorio'
         OTHER = 'OTHER', 'Otro'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     headquarters = models.ForeignKey(Headquarters, on_delete=models.CASCADE, related_name='rooms')
-    name = models.CharField(max_length=100) # Ej: Habitación 301
-    room_type = models.CharField(max_length=20, choices=RoomType.choices, default=RoomType.GENERAL)
+    name = models.CharField(max_length=100)
+    room_type = models.CharField(max_length=20, choices=RoomType.choices, default=RoomType.CONSULTATION)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.name} ({self.headquarters.name})"
 
+
 class Bed(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='beds')
-    name = models.CharField(max_length=50) # Ej: Cama A
+    name = models.CharField(max_length=50)
     is_occupied = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.room.name} - {self.name}"
+
+
+class FeatureFlag(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True, help_text="Ej: module_laboratory, module_psychology")
+    description = models.TextField(blank=True)
+    is_active_globally = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+class ClinicModuleSubscription(ClinicAwareModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    module = models.ForeignKey(FeatureFlag, on_delete=models.CASCADE, related_name='clinic_subscriptions')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('clinic', 'module')
+
+    def __str__(self):
+        return f"{self.clinic.name} - {self.module.name} ({self.is_active})"
+
+
+class DynamicBrandingEngine(ClinicAwareModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    logo_url = models.ImageField(upload_to='clinic_logos/', null=True, blank=True)
+    primary_color = models.CharField(max_length=7, default='#000000')
+    secondary_color = models.CharField(max_length=7, default='#FFFFFF')
+    nomenclature_patient = models.CharField(max_length=50, default='Paciente')
+    nomenclature_specialist = models.CharField(max_length=50, default='Especialista')
+
+    def __str__(self):
+        return f"Branding de {self.clinic.name}"

@@ -9,7 +9,7 @@ from .models import (
 )
 from .serializers import (
     PsychologicalTestSerializer, TestApplicationSerializer,
-    TestBatterySerializer, AnswerSerializer, DimensionSerializer, BaremoSerializer
+    TestBatterySerializer, DimensionSerializer, BaremoSerializer
 )
 from .logic import calculate_test_results
 

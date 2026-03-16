@@ -59,7 +59,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if not clinic:
             clinic_id = request.query_params.get('clinic_id')
             if clinic_id:
-                from clinics.models import Clinic
+                from core.models import Clinic
                 clinic = Clinic.objects.filter(id=clinic_id).first()
 
         if not all([date_str, clinic]):

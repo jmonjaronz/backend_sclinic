@@ -1,25 +1,15 @@
 from rest_framework import serializers
-from .models import B2BCompany, CompanyAffiliation, Benefit
-
-class B2BCompanySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = B2BCompany
-        fields = '__all__'
-
-class CompanyAffiliationSerializer(serializers.ModelSerializer):
-    company_name = serializers.CharField(source='company.name', read_only=True)
-    
-    class Meta:
-        model = CompanyAffiliation
-        fields = ['id', 'company', 'company_name', 'document_type', 'document_number', 'full_name']
+from .models import Benefit
 
 class BenefitSerializer(serializers.ModelSerializer):
-    company_name = serializers.CharField(source='company.name', read_only=True)
-
     class Meta:
         model = Benefit
         fields = [
-            'id', 'name', 'benefit_type', 'precedence', 
-            'discount_percentage', 'discount_fixed', 
-            'company', 'company_name', 'is_active'
+            'id', 'clinic', 'name', 'description', 'benefit_type', 
+            'discount_percentage', 'discount_fixed', 'discount_scope',
+            'precedence', 'is_exclusive', 'valid_from', 'valid_until',
+            'min_age', 'max_age', 'min_previous_visits', 
+            'applies_to_all_headquarters', 'is_active'
         ]
+        read_only_fields = ['id', 'clinic']
+

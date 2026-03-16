@@ -1,6 +1,5 @@
-from .models import TestApplication, Baremo, DimensionResult, Dimension
+from .models import TestApplication, Baremo, DimensionResult
 from django.db import models
-from django.db.models import Sum
 from django.utils import timezone
 
 def calculate_test_results(application_id):
@@ -9,33 +8,37 @@ def calculate_test_results(application_id):
     then assigns result labels based on baremos.
     """
     try:
-        application = TestApplication.objects.get(id=application_id)
+        # Optimization: use select_related for the test
+        application = TestApplication.objects.select_related('test').get(id=application_id)
         test = application.test
+        
+        # Optimization: calculate scale limits once per test
+        scale_stats = test.scale_options.aggregate(
+            mx=models.Max('value'),
+            mn=models.Min('value')
+        )
+        max_scale_value = scale_stats['mx'] or 0
+        min_scale_value = scale_stats['mn'] or 0
         
         # 1. Calculate and save scores per Dimension
         dimensions = test.dimensions.all()
-        total_score = 0
+        total_score = 0.0
         
         for dim in dimensions:
-            # Pre-calcular max valor de escala para puntaje inverso
-            scale_options = test.scale_options.all()
-            max_scale_value = scale_options.aggregate(
-                mx=models.Max('value')
-            )['mx'] or 0
-            min_scale_value = scale_options.aggregate(
-                mn=models.Min('value')
-            )['mn'] or 0
-
             dim_score = 0
-            for answer in application.answers.filter(question__dimension=dim):
+            # Optimization: use select_related for question and selected_option
+            answers = application.answers.filter(question__dimension=dim).select_related('question', 'selected_option')
+            
+            for answer in answers:
                 raw_value = answer.selected_option.value
                 if answer.question.is_reverse_scored:
-                    # Inversion: max + min - valor_actual
+                    # Inversion logic: max + min - valor_actual
                     raw_value = max_scale_value + min_scale_value - raw_value
                 dim_score += raw_value
 
-            # Apply weight if defined
-            weighted_score = dim_score * dim.weight
+            # Apply weight safely
+            weight = getattr(dim, 'weight', 1.0)
+            weighted_score = float(dim_score) * weight
 
             # Find baremo for this dimension
             dim_baremo = Baremo.objects.filter(
