@@ -187,3 +187,27 @@ class EmergencyContact(models.Model):
     phone = models.CharField(max_length=20)
     relationship = models.CharField(max_length=50, blank=True)
     is_primary = models.BooleanField(default=False)
+
+
+class PatientInsurance(models.Model):
+    """
+    Seguro o EPS asociado al paciente.
+    Req: 7_0_Seguros_EPS.md sec. 8
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='insurances')
+    insurer = models.ForeignKey('insurances.Insurer', on_delete=models.CASCADE)
+    plan = models.ForeignKey('insurances.InsurancePlan', on_delete=models.PROTECT)
+    
+    is_holder = models.BooleanField(default=True, help_text="Si es el titular del seguro.")
+    holder_name = models.CharField(max_length=255, blank=True, help_text="Nombre del titular si es dependiente.")
+    
+    policy_number = models.CharField(max_length=100)
+    affiliate_date = models.DateField(null=True, blank=True)
+    valid_until = models.DateField(null=True, blank=True)
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.patient} - {self.insurer.name} ({self.plan.name})"

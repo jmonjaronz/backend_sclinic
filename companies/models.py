@@ -119,6 +119,7 @@ class CompanyEmployee(models.Model):
 class Agreement(ClinicAwareModel):
     """
     Agreement between a Clinic and a Company.
+    Req: 7_1_ConveniosInstitucionales.md
     """
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='agreements')
     name = models.CharField(max_length=255)
@@ -130,6 +131,23 @@ class Agreement(ClinicAwareModel):
 
     def __str__(self):
         return f"{self.company.razon_social} - {self.name}"
+
+
+class InstitutionServicePrice(models.Model):
+    """
+    Preferential price for a specific service under an agreement.
+    Req: 7_1_ConveniosInstitucionales.md sec. 4
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agreement = models.ForeignKey(Agreement, on_delete=models.CASCADE, related_name='service_prices')
+    service = models.ForeignKey('clinics.Service', on_delete=models.CASCADE)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    class Meta:
+        unique_together = ('agreement', 'service')
+
+    def __str__(self):
+        return f"{self.agreement.name} -> {self.service.name}: S/ {self.price}"
 
 
 # ---------------------------------------------------------------------------
