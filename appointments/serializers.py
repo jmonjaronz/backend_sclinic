@@ -1,10 +1,5 @@
 from rest_framework import serializers
 from .models import Appointment, AvailabilityBlock, TreatmentPlan, AppointmentHistory
-from clinics.models import Service, Specialist
-from patients.models import Patient
-from django.db import models
-from django.utils import timezone
-import datetime
 
 class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:

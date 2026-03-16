@@ -1,8 +1,5 @@
 from rest_framework import serializers
-from django.utils import timezone
 from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, VitalSigns, PrenatalControl, NeonatalControl
-from clinics.models import Specialist
-from patients.models import Patient
 
 class SessionNoteSerializer(serializers.ModelSerializer):
     specialist_name = serializers.CharField(source='specialist.user.get_full_name', read_only=True)

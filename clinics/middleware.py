@@ -1,5 +1,4 @@
 from django.utils.deprecation import MiddlewareMixin
-from django.http import Http404
 from clinics.models import Clinic
 
 class ClinicMiddleware(MiddlewareMixin):

@@ -1,6 +1,6 @@
 from django.db import models
 import uuid
-from clinics.models import Clinic
+from core.models import Clinic
 from patients.models import Patient
 from appointments.models import Appointment
 

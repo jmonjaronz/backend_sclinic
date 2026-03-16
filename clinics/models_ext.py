@@ -1,6 +1,6 @@
 from django.db import models
 import uuid
-from clinics.models import Clinic, Headquarters
+from core.models import Clinic
 
 class Specialty(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

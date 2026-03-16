@@ -3,7 +3,7 @@ from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from .models import Patient, DependentLink, EmergencyContact
-from clinics.models import Clinic
+from core.models import Clinic
 
 User = get_user_model()
 

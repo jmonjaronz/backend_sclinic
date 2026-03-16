@@ -1,10 +1,11 @@
 from django.db import models
 import uuid
 from django.conf import settings
-from clinics.models import Clinic, Headquarters, Service, Specialist
+from core.models import ClinicAwareModel
+from clinics.models import Headquarters, Service, Specialist
 from patients.models import Patient
 
-class Appointment(models.Model):
+class Appointment(ClinicAwareModel):
     class Modality(models.TextChoices):
         VIRTUAL = 'VIRTUAL', 'Virtual'
         PRESENCIAL = 'PRESENCIAL', 'Presencial'
@@ -13,6 +14,10 @@ class Appointment(models.Model):
         PENDING_PAYMENT = 'PENDING_PAYMENT', 'Pendiente de Pago'
         PENDING_VALIDATION = 'PENDING_VALIDATION', 'Pendiente de Validación'
         CONFIRMED = 'CONFIRMED', 'Confirmada'
+        WAITING_TRIAGE = 'WAITING_TRIAGE', 'En Espera de Triaje'
+        IN_TRIAGE = 'IN_TRIAGE', 'En Triaje'
+        WAITING_CONSULTATION = 'WAITING_CONSULTATION', 'En Sala de Espera'
+        IN_CONSULTATION = 'IN_CONSULTATION', 'En Consulta'
         CANCELLED = 'CANCELLED', 'Cancelada'
         COMPLETED = 'COMPLETED', 'Completada'
         NO_SHOW = 'NO_SHOW', 'Inasistencia / Cerrado'
@@ -24,7 +29,6 @@ class Appointment(models.Model):
         OTHER = 'OTHER', 'Otro'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='appointments')
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='appointments')
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='appointments')
     specialist = models.ForeignKey(Specialist, on_delete=models.SET_NULL, null=True, related_name='appointments')
@@ -49,6 +53,9 @@ class Appointment(models.Model):
     validated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='validated_appointments')
     validation_date = models.DateTimeField(null=True, blank=True)
 
+    # Payment deadline (Req: 8_Agenda.md sec. 6 - Reservas Pendientes de Pago)
+    payment_deadline = models.DateTimeField(null=True, blank=True, help_text="Si la cita no es pagada antes de esta fecha, se cancela automaticamente.")
+
     # Rescheduling and Cancellation info
     reschedule_count = models.PositiveIntegerField(default=0)
     is_rescheduled = models.BooleanField(default=False)
@@ -64,13 +71,12 @@ class Appointment(models.Model):
     def __str__(self):
         return f"{self.patient} - {self.service} ({self.date} {self.start_time})"
 
-class AvailabilityBlock(models.Model):
+class AvailabilityBlock(ClinicAwareModel):
     """
     Blocks specific specialists or the entire clinic for certain periods.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='availability_blocks')
-    specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, null=True, blank=True, related_name='blocks') # Null means clinic-wide
+    specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, null=True, blank=True, related_name='availability_blocks_as_specialist') # Null means clinic-wide
     
     # Rangos de fechas para el bloqueo (Ej: Vacaciones del 10 al 20)
     start_date = models.DateField()
@@ -92,12 +98,11 @@ class AvailabilityBlock(models.Model):
         target = self.specialist if self.specialist else "Toda la Clínica"
         return f"Bloqueo: {target} ({self.start_date} al {self.end_date})"
 
-class TreatmentPlan(models.Model):
+class TreatmentPlan(ClinicAwareModel):
     """
     Groups suggested multiple sessions for a patient.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='treatment_plans')
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='treatment_plans')
     specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='treatment_plans')
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
@@ -146,3 +151,30 @@ class AppointmentHistory(models.Model):
 
     def __str__(self):
         return f"History: {self.appointment.id} at {self.created_at}"
+
+
+class AppointmentSoftLock(models.Model):
+    """
+    Temporary hold on a time slot during the booking process.
+    Prevents race conditions when multiple users book simultaneously.
+    Req: 8_Agenda.md sec. 2 - Bloqueo Temporal de Horario (Soft Lock)
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='soft_locks')
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='soft_locks')
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    # Session identifier for the user holding the lock
+    session_key = models.CharField(max_length=100, db_index=True)
+    locked_until = models.DateTimeField(help_text="Expiration of the soft lock. Auto-released after this time.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['specialist', 'date', 'start_time']),
+            models.Index(fields=['locked_until']),
+        ]
+
+    def __str__(self):
+        return f"SoftLock {self.specialist} {self.date} {self.start_time} (until {self.locked_until})"

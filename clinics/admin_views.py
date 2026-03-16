@@ -1,9 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from django.db.models import Count, Sum
 from core.permissions import IsSuperAdmin
-from .models import Clinic, Subscription
+from core.models import Clinic
 from appointments.models import Appointment
 from users.models import User
 from companies.models import Agreement

@@ -2,7 +2,7 @@ from rest_framework import status, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import action
-from .models import Patient, DependentLink
+from .models import Patient
 from .serializers import PatientRegistrationSerializer, PatientSerializer
 
 class PatientRegistrationView(APIView):

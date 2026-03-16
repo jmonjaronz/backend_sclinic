@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Company, Agreement, Employee
+from .models import Company, Agreement, CompanyEmployee
 from .serializers import CompanySerializer, AgreementSerializer, EmployeeSerializer, EmployeeRegistrationSerializer
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -53,10 +53,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         if hasattr(user, 'managed_company'):
-            return Employee.objects.filter(company=user.managed_company)
+            return CompanyEmployee.objects.filter(company=user.managed_company)
             
         clinic = getattr(user, 'clinic', None)
-        return Employee.objects.filter(company__clinic=clinic)
+        return CompanyEmployee.objects.filter(company__clinic=clinic)
 
     def get_serializer_class(self):
         if self.action == 'create':

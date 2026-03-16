@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from django.utils import timezone
 from .models import (
     TestBattery, PsychologicalTest, Dimension, Question, ScaleOption, 
     Baremo, TestApplication, Answer, DimensionResult

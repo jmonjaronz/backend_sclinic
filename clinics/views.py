@@ -1,7 +1,8 @@
 from rest_framework import viewsets, permissions
-from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed, SpecialistSchedule
+from core.models import Clinic
+from .models import Headquarters, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed, SpecialistSchedule
 from .serializers import (
-    ClinicSerializer, HeadquartersSerializer, SpecialtySerializer,
+    ClinicSerializer, HeadquartersSerializer,
     ServiceSerializer, SpecialistSerializer, SubscriptionPlanSerializer,
     SubscriptionSerializer, RoomSerializer, BedSerializer, SpecialistScheduleSerializer
 )

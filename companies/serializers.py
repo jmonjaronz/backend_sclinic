@@ -1,7 +1,6 @@
 from rest_framework import serializers
-from .models import Company, Agreement, Employee
+from .models import Company, Agreement, CompanyEmployee
 from patients.models import Patient
-import datetime
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,15 +24,20 @@ class AgreementSerializer(serializers.ModelSerializer):
         ]
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    patient_name = serializers.CharField(source='patient.user.get_full_name', read_only=True)
-    document_number = serializers.CharField(source='patient.document_number', read_only=True)
+    patient_name = serializers.SerializerMethodField()
     
     class Meta:
-        model = Employee
+        model = CompanyEmployee
         fields = [
-            'id', 'company', 'patient', 'patient_name', 'document_number',
-            'job_title', 'department', 'status', 'hired_at'
+            'id', 'company', 'patient', 'patient_name',
+            'document_type', 'document_number', 'first_name', 'last_name',
+            'job_title', 'department', 'risk_level', 'status', 'hired_at'
         ]
+
+    def get_patient_name(self, obj):
+        if obj.patient:
+            return f"{obj.patient.first_name} {obj.patient.last_name}"
+        return f"{obj.first_name} {obj.last_name}"
 
 class EmployeeRegistrationSerializer(serializers.Serializer):
     """
@@ -53,7 +57,6 @@ class EmployeeRegistrationSerializer(serializers.Serializer):
     hired_at = serializers.DateField(required=False)
     
     def create(self, validated_data):
-        request = self.context.get('request')
         company = validated_data.get('company') # Managed by the view
         
         # 1. Get or Create Patient
@@ -69,11 +72,15 @@ class EmployeeRegistrationSerializer(serializers.Serializer):
             }
         )
         
-        # 2. Link as Employee
-        employee, _ = Employee.objects.get_or_create(
+        # 2. Link as CompanyEmployee
+        employee, _ = CompanyEmployee.objects.get_or_create(
             company=company,
-            patient=patient,
+            document_type=validated_data['document_type'],
+            document_number=validated_data['document_number'],
             defaults={
+                'patient': patient,
+                'first_name': validated_data['first_name'],
+                'last_name': validated_data['last_name'],
                 'job_title': validated_data.get('job_title', ''),
                 'department': validated_data.get('department', ''),
                 'hired_at': validated_data.get('hired_at'),

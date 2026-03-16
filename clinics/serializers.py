@@ -1,4 +1,6 @@
-from .models import Clinic, Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed, SpecialistSchedule
+from rest_framework import serializers
+from .models import Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed, SpecialistSchedule
+from core.models import Clinic
 
 class HeadquartersSerializer(serializers.ModelSerializer):
     class Meta:

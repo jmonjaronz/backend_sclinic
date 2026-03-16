@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Local apps
+    'core',
     'clinics',
     'users',
     'patients',
@@ -47,7 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'clinics.middleware.ClinicMiddleware',
+    'core.middleware.tenant.MultiDomainMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
