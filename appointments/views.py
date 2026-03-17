@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.utils import timezone
 import datetime
-from .models import Appointment, AvailabilityBlock, TreatmentPlan, AppointmentHistory
+from .models import Appointment, AvailabilityBlock, TreatmentPlan, AppointmentHistory, AppointmentSoftLock
 from .serializers import AppointmentSerializer, AvailabilityBlockSerializer, TreatmentPlanSerializer, AppointmentHistorySerializer
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -43,12 +43,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             
         serializer.save(**extra_data)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['get'])
     def available_slots(self, request):
         """
         Consulta disponibilidad real de slots para un especialista, fecha y servicio.
+        Incluye validación de Soft Locks (bloqueos temporales).
         """
-        specialist_id = request.query_params.get('specialist_id')
+        specialist_id = request.query_params.get('specialist_id') # Modificando a specialist_id para consistencia
         date_str = request.query_params.get('date')
         service_id = request.query_params.get('service_id')
         
@@ -73,6 +74,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         from clinics.models import Specialist, Service
         from .services import check_availability
 
+        service_id = request.query_params.get('service_id')
         specialist = Specialist.objects.filter(id=specialist_id, clinic=clinic).first() if specialist_id else None
         service = Service.objects.filter(id=service_id, clinic=clinic).first() if service_id else None
 
@@ -89,17 +91,26 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             slot_start = current_time.time()
             slot_end = (current_time + datetime.timedelta(minutes=duration)).time()
             
-            is_avail, _ = check_availability(
-                clinic=clinic,
+            # Consultar bloqueos temporales activos (Soft Locks)
+            has_lock = AppointmentSoftLock.objects.filter(
+                specialist_id=specialist_id,
                 date=date_obj,
                 start_time=slot_start,
-                end_time=slot_end,
-                specialist=specialist,
-                service=service
-            )
-            
-            if is_avail:
-                available_slots.append(slot_start.strftime("%H:%M"))
+                locked_until__gt=timezone.now()
+            ).exists()
+
+            if not has_lock:
+                is_avail, _ = check_availability(
+                    clinic=clinic,
+                    date=date_obj,
+                    start_time=slot_start,
+                    end_time=slot_end,
+                    specialist=specialist,
+                    service=service
+                )
+                
+                if is_avail:
+                    available_slots.append(slot_start.strftime("%H:%M"))
             
             current_time += datetime.timedelta(minutes=duration)
 
@@ -108,6 +119,44 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             "specialist": specialist.user.get_full_name() if (specialist and getattr(specialist, 'user', None)) else "Cualquiera",
             "service": service.name if service else "General",
             "available_slots": available_slots
+        })
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def acquire_lock(self, request):
+        """
+        Adquiere un Soft Lock temporal (3 min) para un slot.
+        """
+        specialist_id = request.data.get('specialist_id')
+        date_str = request.data.get('date')
+        time_str = request.data.get('start_time')
+        session_key = request.data.get('session_key', "default")
+        
+        try:
+            date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+            time_obj = datetime.datetime.strptime(time_str, "%H:%M").time()
+        except (ValueError, TypeError):
+             return Response({"error": "Formato de fecha (YYYY-MM-DD) o hora (HH:MM) inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar si ya existe un lock activo
+        if AppointmentSoftLock.objects.filter(
+            specialist_id=specialist_id, 
+            date=date_obj, 
+            start_time=time_obj,
+            locked_until__gt=timezone.now()
+        ).exists():
+            return Response({"error": "Este horario ya está siendo reservado por otro usuario."}, status=status.HTTP_409_CONFLICT)
+            
+        lock = AppointmentSoftLock.objects.create(
+            specialist_id=specialist_id,
+            date=date_obj,
+            start_time=time_obj,
+            session_key=session_key,
+            locked_until=timezone.now() + datetime.timedelta(minutes=3)
+        )
+        return Response({
+            "lock_id": lock.id, 
+            "locked_until": lock.locked_until,
+            "message": "Bloqueo temporal adquirido por 3 minutos."
         })
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])

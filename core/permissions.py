@@ -41,3 +41,31 @@ class ClinicHasModulePermission(permissions.BasePermission):
             module__is_active_globally=True,
             is_active=True
         ).exists()
+
+class PortalAccessPermission(permissions.BasePermission):
+    """
+    Controls access based on the target portal.
+    Portals: INTRANET, PATIENT, B2B.
+    """
+    def has_permission(self, request, view):
+        portal = getattr(view, 'portal_type', None)
+        if not portal:
+            return True # Not restricted by portal
+            
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+            
+        from users.models import User
+        
+        if portal == User.PortalType.INTRANET:
+            # Must have an active role from the clinic
+            return user.active_role is not None and user.active_role.clinic == request.clinic
+            
+        if portal == User.PortalType.PATIENT:
+            return user.role == User.Role.PATIENT
+            
+        if portal == User.PortalType.B2B:
+            return user.role == User.Role.COMPANY
+            
+        return False

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
-from .models import Patient, DependentLink, EmergencyContact
+from .models import Patient, DependentLink, EmergencyContact, PatientFamilyLink
 from core.models import Clinic
 
 User = get_user_model()
@@ -11,6 +11,14 @@ class EmergencyContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmergencyContact
         fields = ['name', 'phone', 'relationship']
+
+class PatientFamilyLinkSerializer(serializers.ModelSerializer):
+    patient_related_name = serializers.CharField(source='patient_related.get_full_name', read_only=True)
+    
+    class Meta:
+        model = PatientFamilyLink
+        fields = ['id', 'patient_origin', 'patient_related', 'patient_related_name', 'relationship', 'status', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 class PatientRegistrationSerializer(serializers.Serializer):
     # Clinic ID is required for multi-tenancy
@@ -165,6 +173,7 @@ class PatientRegistrationSerializer(serializers.Serializer):
 class PatientSerializer(serializers.ModelSerializer):
     emergency_contacts = EmergencyContactSerializer(many=True, required=False)
     tutor_links = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    family_links = PatientFamilyLinkSerializer(source='family_links_sent', many=True, read_only=True)
     
     class Meta:
         model = Patient
@@ -175,6 +184,6 @@ class PatientSerializer(serializers.ModelSerializer):
             'native_language', 'academic_degree', 'phone', 'email', 'civil_status', 
             'is_minor', 'educational_institution', 'grade_section', 
             'terms_accepted', 'dependent_doc_signed', 'is_validated', 'emergency_contacts',
-            'tutor_links'
+            'tutor_links', 'family_links'
         ]
         read_only_fields = ['is_validated']

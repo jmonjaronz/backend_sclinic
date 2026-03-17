@@ -97,8 +97,14 @@ class Specialist(ClinicAwareModel):
     # Perfil público (visible para pacientes)
     bio = models.TextField(blank=True)
     photo = models.ImageField(upload_to='specialist_photos/', null=True, blank=True)
+    signature_photo = models.ImageField(upload_to='specialist_signatures/', null=True, blank=True, help_text="Imagen de la firma física escaneada.")
+    digital_signature_hash = models.CharField(max_length=255, blank=True, help_text="Hash único para validación de firma digital.")
     languages = models.CharField(max_length=255, blank=True, help_text="Idiomas que habla el especialista.")
     keywords = models.CharField(max_length=500, blank=True, help_text="Palabras clave o áreas de especialización.")
+
+    # Visibility / Perfil Dual (Req: 4_Especialistas.md sec. 4)
+    is_public = models.BooleanField(default=True, help_text="Si True, es visible en el portal del paciente.")
+    is_internal = models.BooleanField(default=True, help_text="Si True, es visible para el personal administrativo interno.")
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.clinic.name})"
@@ -214,6 +220,59 @@ class Bed(models.Model):
         return f"{self.room.name} - {self.name}"
 
 
+class Equipment(ClinicAwareModel):
+    """
+    Medical equipment or specialized machines (Req: 5_CatalogoServicios.md).
+    E.g. ECG, X-Ray, Dental Chair.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    serial_number = models.CharField(max_length=100, blank=True)
+    headquarters = models.ForeignKey(Headquarters, on_delete=models.CASCADE, related_name='equipments')
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.headquarters.name}"
+
+
+class ServiceResourceRequirement(models.Model):
+    """
+    Resources required for a service to be performed.
+    Req: 5_CatalogoServicios.md sec. 6
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='resource_requirements')
+    
+    # Can require a specific room type or specific equipment
+    room_type = models.CharField(max_length=20, choices=Room.RoomType.choices, null=True, blank=True)
+    equipment = models.ForeignKey(Equipment, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        target = self.equipment.name if self.equipment else f"Sala {self.get_room_type_display()}"
+        return f"Req para {self.service.name}: {target}"
+
+
+class ServiceConsentRequirement(models.Model):
+    """
+    Links a service to a specific versioned consent document.
+    Req: 5_CatalogoServicios.md sec. 5
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='consent_requirements')
+    consent_document = models.ForeignKey('users.ConsentDocument', on_delete=models.PROTECT)
+    
+    is_mandatory = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('service', 'consent_document')
+
+    def __str__(self):
+        return f"Consentimiento {self.consent_document.title} para {self.service.name}"
+
+
 class FeatureFlag(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True, help_text="Ej: module_laboratory, module_psychology")
@@ -246,3 +305,23 @@ class DynamicBrandingEngine(ClinicAwareModel):
 
     def __str__(self):
         return f"Branding de {self.clinic.name}"
+
+
+class ServiceClinicalRestriction(ClinicAwareModel):
+    """
+    Sets constraints between appointments of the same patient.
+    Req: 8_Agenda.md sec. 12 - Restricciones Clínicas entre Citas
+    """
+    specialty_a = models.ForeignKey(Specialty, on_delete=models.CASCADE, related_name='restrictions_as_a')
+    specialty_b = models.ForeignKey(Specialty, on_delete=models.CASCADE, related_name='restrictions_as_b')
+    
+    min_gap_days = models.PositiveIntegerField(default=1, help_text="Mínimo de días entre citas de estas especialidades.")
+    max_gap_days = models.PositiveIntegerField(null=True, blank=True, help_text="Máximo de días permitidos entre citas (si aplica).")
+    
+    message_error = models.CharField(max_length=255, blank=True, help_text="Mensaje a mostrar si se viola la restricción.")
+
+    class Meta:
+        unique_together = ('clinic', 'specialty_a', 'specialty_b')
+
+    def __str__(self):
+        return f"Restricción {self.specialty_a.name} -> {self.specialty_b.name} ({self.min_gap_days} d)"

@@ -14,7 +14,14 @@ class User(AbstractUser):
         PATIENT = 'PATIENT', 'Paciente'
         COMPANY = 'COMPANY', 'Empresa'
 
+    class PortalType(models.TextChoices):
+        INTRANET = 'INTRANET', 'Portal Intranet (Staff/Clínica)'
+        PATIENT = 'PATIENT', 'Portal Paciente'
+        B2B = 'B2B', 'Portal Empresarial (B2B)'
+
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PATIENT)
+    active_role = models.ForeignKey('DynamicRole', on_delete=models.SET_NULL, null=True, blank=True, related_name='active_users')
+    
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, null=True, blank=True, related_name='users')
     document_type = models.CharField(max_length=20, blank=True, db_index=True)
     document_number = models.CharField(max_length=50, blank=True, db_index=True)
@@ -24,6 +31,17 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+    def switch_active_role(self, dynamic_role):
+        """
+        Req: 2_Usuarios_Permisos.md sec. 2 - Asignación de Roles
+        Allows selecting the active role during the session.
+        """
+        if dynamic_role in self.dynamic_roles.all():
+            self.active_role = dynamic_role
+            self.save()
+            return True
+        return False
 
 
 # ---------------------------------------------------------------------------

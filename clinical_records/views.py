@@ -2,12 +2,17 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, VitalSigns, PrenatalControl, NeonatalControl
+from .models import (
+    ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, 
+    VitalSigns, PrenatalControl, NeonatalControl, Prescription
+)
 from .serializers import (
     ClinicalRecordSerializer, SessionNoteSerializer,
     EmergencyAdmissionSerializer, HospitalizationSerializer, TreatmentSerializer,
-    VitalSignsSerializer, PrenatalControlSerializer, NeonatalControlSerializer
+    VitalSignsSerializer, PrenatalControlSerializer, NeonatalControlSerializer,
+    PrescriptionSerializer
 )
+from .services import AutocompleteService, PrescriptionService
 from django.db.models import Q
 
 class ClinicalRecordViewSet(viewsets.ModelViewSet):
@@ -180,3 +185,54 @@ class NeonatalControlViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'clinic') and user.clinic:
             qs = qs.filter(record__clinic=user.clinic)
         return qs
+
+class PrescriptionViewSet(viewsets.ModelViewSet):
+    """
+    Gestión de Recetas Médicas con validación de alergias.
+    """
+    serializer_class = PrescriptionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Prescription.objects.all()
+        if hasattr(user, 'clinic') and user.clinic:
+            qs = qs.filter(clinic=user.clinic)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        # Validación PROACTIVA de Alergias antes de crear
+        patient_id = request.data.get('patient')
+        medications = request.data.get('items', []) # Lista de nombres o IDs
+        
+        if patient_id and medications:
+            from patients.models import Patient
+            try:
+                patient = Patient.objects.get(id=patient_id)
+                conflicts = PrescriptionService.check_allergies(patient, medications)
+                if conflicts:
+                    # Si hay conflictos pero no vienen con override_reason, advertir.
+                    if not request.data.get('allergy_override_reason'):
+                        return Response({
+                            "detail": "Se han detectado posibles alergias.",
+                            "conflicts": conflicts,
+                            "requires_override": True
+                        }, status=status.HTTP_409_CONFLICT)
+            except Patient.DoesNotExist:
+                pass
+
+        return super().create(request, *args, **kwargs)
+
+class DiagnosisSearchViewSet(viewsets.ViewSet):
+    """
+    Buscador de diagnósticos CIE-10.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        query = request.query_params.get('q', '')
+        if not query:
+            return Response([])
+        
+        results = AutocompleteService.search_diagnosis(query)
+        return Response(results)

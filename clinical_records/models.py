@@ -415,3 +415,40 @@ class OccupationalAptitude(ClinicAwareModel):
 
     def __str__(self):
         return f"Aptitud: {self.patient} - {self.aptitude_status} ({self.issued_at.date()})"
+class EvolutionNote(models.Model):
+    """
+    Structured evolution note following the SOAP format.
+    Req: 13_Seguimiento_Pacientes_Evoluciones.md
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record = models.ForeignKey(ClinicalRecord, on_delete=models.CASCADE, related_name='evolutions')
+    specialist = models.ForeignKey(Specialist, on_delete=models.CASCADE, related_name='evolutions_authored')
+    appointment = models.ForeignKey('appointments.Appointment', on_delete=models.SET_NULL, null=True, blank=True, related_name='evolution_note')
+    
+    # SOAP Structure
+    subjective = models.TextField(verbose_name="S - Subjetivo", help_text="Lo que el paciente refiere.")
+    objective = models.TextField(verbose_name="O - Objetivo", help_text="Hallazgos clínicos observados.")
+    assessment = models.TextField(verbose_name="A - Apreciación", help_text="Interpretación clínica.")
+    plan = models.TextField(verbose_name="P - Plan", help_text="Tratamiento o acciones a seguir.")
+    
+    # Optional flags for treatment tracking
+    improvement_status = models.CharField(
+        max_length=50, 
+        choices=[
+            ('IMPROVED', 'Mejoría clínica'),
+            ('STABLE', 'Sin cambios'),
+            ('WORSENED', 'Empeoramiento'),
+            ('INSUFFICIENT_RESPONSE', 'Respuesta insuficiente')
+        ],
+        blank=True
+    )
+    
+    is_locked = models.BooleanField(default=False)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Evolución SOAP - {self.record.patient} ({self.created_at.date()})"
