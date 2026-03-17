@@ -5,6 +5,21 @@ from core.models import ClinicAwareModel
 from clinics.models import Headquarters, Service, Specialist
 from patients.models import Patient
 
+class AppointmentGroup(ClinicAwareModel):
+    """
+    Groups multiple appointments created in a single operation.
+    E.g. Family booking or multiple physical therapy sessions.
+    Req: 8_Agenda.md sec. 11 - Agendamiento Múltiple de Citas
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient_main = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='appointment_groups')
+    created_at = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Grupo {self.id} - {self.patient_main}"
+
+
 class Appointment(ClinicAwareModel):
     class Modality(models.TextChoices):
         VIRTUAL = 'VIRTUAL', 'Virtual'
@@ -34,10 +49,16 @@ class Appointment(ClinicAwareModel):
     specialist = models.ForeignKey(Specialist, on_delete=models.SET_NULL, null=True, related_name='appointments')
     headquarters = models.ForeignKey(Headquarters, on_delete=models.SET_NULL, null=True, related_name='appointments')
     treatment_plan = models.ForeignKey('TreatmentPlan', on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
+    appointment_group = models.ForeignKey(AppointmentGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     
     # B2B Integration
     company = models.ForeignKey('companies.Company', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     agreement = models.ForeignKey('companies.Agreement', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    
+    # Insurance Integration
+    patient_insurance = models.ForeignKey('patients.PatientInsurance', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    insurance_copay = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Copago fijo aplicado.")
+    insurance_coinsurance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Monto por coaseguro (%) aplicado.")
     
     date = models.DateField()
     start_time = models.TimeField()
@@ -92,6 +113,7 @@ class AvailabilityBlock(ClinicAwareModel):
     
     reason = models.CharField(max_length=255, blank=True) # Vacaciones, licencias, etc.
     is_recurring = models.BooleanField(default=False)
+    week_interval = models.PositiveIntegerField(default=1, help_text="Intervalo de semanas para la recurrencia. 1 = cada semana, 2 = cada 2 semanas, etc.")
     # recurring_rules = ... (could be expanded later)
 
     def __str__(self):

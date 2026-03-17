@@ -36,3 +36,51 @@ class AutocompleteService:
             if query.lower() in d['code'].lower() or query.lower() in d['name'].lower()
         ]
         return results
+
+class PrescriptionService:
+    """
+    Handles clinical logic for prescriptions, including allergy validation.
+    Req: 11_HCE.md sec. 4 - Recetario Digital
+    """
+    
+    @staticmethod
+    def check_allergies(patient, medication_list):
+        """
+        Cross-checks a list of medications against patient's known allergies.
+        Returns a list of detected conflicts.
+        """
+        # In a real system, we would have a mapping of medications to components
+        # or use an external pharmacological API.
+        # Here we do a simple string match against noted allergies.
+        
+        # Get patient allergies from VitalSigns (Triage) or ClinicalRecord antecedents
+        detected_conflicts = []
+        
+        # 1. Check VitalSigns (most recent triage)
+        from .models import VitalSigns
+        latest_vitals = VitalSigns.objects.filter(patient=patient).order_by('-created_at').first()
+        allergies_text = ""
+        if latest_vitals:
+            allergies_text += latest_vitals.allergy_notes.lower()
+            
+        # 2. Check ClinicalRecord antecedents
+        if hasattr(patient, 'clinical_record'):
+            ante = patient.clinical_record.general_antecedents.get('allergies', "")
+            if isinstance(ante, str):
+                allergies_text += " " + ante.lower()
+
+        if not allergies_text.strip():
+            return []
+
+        for med in medication_list:
+            # Simple keyword search
+            # med can be a string or a dict with 'name'
+            med_name = med.get('name', '').lower() if isinstance(med, dict) else med.lower()
+            
+            if med_name and med_name in allergies_text:
+                detected_conflicts.append({
+                    "medication": med_name,
+                    "conflict": f"Coincidencia directa con alergia reportada: '{med_name}'"
+                })
+        
+        return detected_conflicts

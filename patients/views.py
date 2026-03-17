@@ -2,8 +2,20 @@ from rest_framework import status, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import action
-from .models import Patient
-from .serializers import PatientRegistrationSerializer, PatientSerializer
+from .models import Patient, PatientFamilyLink
+from .serializers import PatientRegistrationSerializer, PatientSerializer, PatientFamilyLinkSerializer
+
+class PatientFamilyLinkViewSet(viewsets.ModelViewSet):
+    queryset = PatientFamilyLink.objects.all()
+    serializer_class = PatientFamilyLinkSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        base_qs = PatientFamilyLink.objects.all()
+        if user.role == 'PATIENT':
+            return base_qs.filter(patient_origin__user=user)
+        return base_qs
 
 class PatientRegistrationView(APIView):
     """

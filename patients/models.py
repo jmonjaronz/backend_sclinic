@@ -131,35 +131,29 @@ class Patient(ClinicAwareModel):
 
 class PatientFamilyLink(models.Model):
     """
-    Vínculo familiar entre dos pacientes registrados en la clínica.
-    Diferente de DependentLink (User->Patient), este es Patient->Patient.
-    Usado para herencia de beneficios y antecedentes familiares.
+    Direct link between two patients (Req: 3_Pacientes.md).
+    Allows family-level views and benefit inheritance.
     """
     class RelationshipType(models.TextChoices):
-        PADRE = 'PADRE', 'Padre'
-        MADRE = 'MADRE', 'Madre'
-        HIJO = 'HIJO', 'Hijo(a)'
-        CONYUGE = 'CONYUGE', 'Cónyuge'
-        HERMANO = 'HERMANO', 'Hermano(a)'
-        TUTOR = 'TUTOR', 'Tutor Legal/Apoderado'
-        OTRO = 'OTRO', 'Otro'
-
-    class LinkStatus(models.TextChoices):
-        ACTIVE = 'ACTIVE', 'Activo'
-        INACTIVE = 'INACTIVE', 'Inactivo'
+        PARENT = 'PARENT', 'Padre/Madre'
+        CHILD = 'CHILD', 'Hijo/a'
+        SPOUSE = 'SPOUSE', 'Cónyuge'
+        SIBLING = 'SIBLING', 'Hermano/a'
+        OTHER = 'OTHER', 'Otro'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    patient_origin = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='family_links_as_origin')
-    patient_related = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='family_links_as_related')
+    patient_origin = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='family_links_sent')
+    patient_related = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='family_links_received')
     relationship = models.CharField(max_length=20, choices=RelationshipType.choices)
-    status = models.CharField(max_length=20, choices=LinkStatus.choices, default=LinkStatus.ACTIVE)
+    
+    status = models.CharField(max_length=20, choices=[('ACTIVE', 'Activo'), ('INACTIVE', 'Inactivo')], default='ACTIVE')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('patient_origin', 'patient_related')
 
     def __str__(self):
-        return f"{self.patient_origin} -> {self.relationship} -> {self.patient_related}"
+        return f"{self.patient_origin} is {self.relationship} of {self.patient_related}"
 
 
 class DependentLink(models.Model):
@@ -194,8 +188,21 @@ class PatientInsurance(models.Model):
     Seguro o EPS asociado al paciente.
     Req: 7_0_Seguros_EPS.md sec. 8
     """
+    class Status(models.TextChoices):
+        ACTIVE = 'ACTIVE', 'Activo'
+        INACTIVE = 'INACTIVE', 'Inactivo'
+        BLOCKED = 'BLOCKED', 'Bloqueado'
+        ANONYMIZED = 'ANONYMIZED', 'Anonimizado'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='insurances')
+    clinic = models.ForeignKey('core.Clinic', on_delete=models.CASCADE, related_name='patient_insurances')
+    
+    # Required for Req 3.3.1 (ID único por cada clinica)
+    clinic_patient_id = models.PositiveIntegerField(null=True, blank=True, help_text="ID autoincremental por clínica.")
+    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    
     insurer = models.ForeignKey('insurances.Insurer', on_delete=models.CASCADE)
     plan = models.ForeignKey('insurances.InsurancePlan', on_delete=models.PROTECT)
     

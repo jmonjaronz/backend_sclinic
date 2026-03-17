@@ -12,6 +12,7 @@ class MedicalResult(models.Model):
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name='medical_results')
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='medical_results')
     appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='medical_result')
+    session_note = models.ForeignKey('clinical_records.SessionNote', on_delete=models.SET_NULL, null=True, blank=True, related_name='medical_results')
     
     class ResultType(models.TextChoices):
         LABORATORY = 'LABORATORY', 'Laboratorio'

@@ -36,6 +36,9 @@ INSTALLED_APPS = [
     'medical_results.apps.MedicalResultsConfig',
     'companies',
     'discounts.apps.DiscountsConfig',
+    'insurances',
+    'occupational_health',
+    'notifications',
 ]
 
 MIDDLEWARE = [

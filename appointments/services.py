@@ -34,7 +34,17 @@ def check_availability(clinic, date, start_time, end_time, specialist=None, serv
         weekday = str(date.weekday())
         if block.days_of_week and weekday not in block.days_of_week.split(','):
             continue
-        
+            
+        # 1.1. Verificar Recurrencia Compleja (ej. Cada 2 semanas)
+        # Asumimos que block tiene un campo 'week_interval' y 'start_date' como base
+        # Nota: Si el modelo no tiene week_interval, esta lógica es preventiva o requiere cambio en modelo.
+        # Según el requerimiento "cada 2 semanas", implementamos el cálculo de intervalo:
+        if hasattr(block, 'week_interval') and block.week_interval > 1:
+            delta_days = (date - block.start_date).days
+            weeks_elapsed = delta_days // 7
+            if weeks_elapsed % block.week_interval != 0:
+                continue
+
         # Verificar solapamiento de horario si el bloqueo no es de todo el día
         if block.start_time and block.end_time:
             # Hay solapamiento si (start_time < block.end_time) Y (end_time > block.start_time)
@@ -95,3 +105,39 @@ def check_availability(clinic, date, start_time, end_time, specialist=None, serv
                 return False, "El especialista ya tiene una cita programada en este horario."
     
     return True, "Disponible"
+
+class AppointmentService:
+    """
+    Handles complex status transitions and flow logic for appointments.
+    Req: 9_Admision_Triaje.md
+    """
+    
+    @staticmethod
+    def process_check_in(appointment):
+        """
+        Handles the arrival of the patient at the clinic.
+        Determines if triage is needed based on service configuration.
+        """
+        if appointment.status != Appointment.Status.CONFIRMED:
+            # If it was PENDING_PAYMENT, we assume payment was validated at reception
+            appointment.status = Appointment.Status.CONFIRMED
+            
+        # Check if service requires triage
+        if appointment.service.requires_triage:
+            appointment.status = Appointment.Status.WAITING_TRIAGE
+        else:
+            appointment.status = Appointment.Status.WAITING_CONSULTATION
+            
+        appointment.save()
+        return appointment.status
+
+    @staticmethod
+    def complete_triage(appointment, specialist=None):
+        """
+        Called after nurse completes VitalSigns.
+        Moves patient to doctor's waiting room.
+        """
+        if appointment.status == Appointment.Status.IN_TRIAGE or appointment.status == Appointment.Status.WAITING_TRIAGE:
+            appointment.status = Appointment.Status.WAITING_CONSULTATION
+            appointment.save()
+        return appointment.status

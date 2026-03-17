@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, VitalSigns, PrenatalControl, NeonatalControl
+from .models import (
+    ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, 
+    VitalSigns, PrenatalControl, NeonatalControl, Prescription, PrescriptionItem
+)
 
 class SessionNoteSerializer(serializers.ModelSerializer):
     specialist_name = serializers.CharField(source='specialist.user.get_full_name', read_only=True)
@@ -8,11 +11,33 @@ class SessionNoteSerializer(serializers.ModelSerializer):
         model = SessionNote
         fields = [
             'id', 'record', 'appointment', 'specialist', 'specialist_name', 'date',
+            'template', 'dynamic_data',
             'session_reason', 'observations', 'diagnosis', 'therapeutic_objective',
             'recommendations', 'commitments', 'assigned_materials', 'next_session_indications',
             'is_locked', 'locked_at'
         ]
         read_only_fields = ['id', 'is_locked', 'locked_at', 'date']
+
+    def validate(self, data):
+        """
+        Valida que dynamic_data cumpla con el esquema definido en el template.
+        """
+        template = data.get('template')
+        dynamic_data = data.get('dynamic_data')
+
+        if template and dynamic_data:
+            import jsonschema
+            from jsonschema import validate
+            try:
+                # El campo schema en HCETemplate es un JSON que debe seguir el formato jsonschema
+                # Si el schema guardado no es un jsonschema válido, fallará aquí.
+                validate(instance=dynamic_data, schema=template.schema)
+            except jsonschema.exceptions.ValidationError as e:
+                raise serializers.ValidationError({"dynamic_data": f"Error de validación contra el esquema: {e.message}"})
+            except Exception as e:
+                raise serializers.ValidationError({"dynamic_data": f"Error interno al validar esquema: {str(e)}"})
+        
+        return data
 
     def update(self, instance, validated_data):
         # Regla de Negocio Crítica: Inmutabilidad
@@ -75,3 +100,23 @@ class NeonatalControlSerializer(serializers.ModelSerializer):
     class Meta:
         model = NeonatalControl
         fields = '__all__'
+
+class PrescriptionItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrescriptionItem
+        fields = '__all__'
+
+class PrescriptionSerializer(serializers.ModelSerializer):
+    items = PrescriptionItemSerializer(many=True)
+    specialist_name = serializers.CharField(source='specialist.user.get_full_name', read_only=True)
+
+    class Meta:
+        model = Prescription
+        fields = '__all__'
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        prescription = Prescription.objects.create(**validated_data)
+        for item_data in items_data:
+            PrescriptionItem.objects.create(prescription=prescription, **item_data)
+        return prescription

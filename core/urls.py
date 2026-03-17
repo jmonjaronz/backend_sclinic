@@ -20,4 +20,6 @@ urlpatterns = [
     path('api/medical-results/', include('medical_results.urls')),
     path('api/companies/', include('companies.urls')),
     path('api/discounts/', include('discounts.urls')),
+    path('api/insurances/', include('insurances.urls')),
+    path('api/occupational-health/', include('occupational_health.urls')),
 ]
