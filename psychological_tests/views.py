@@ -1,6 +1,4 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
+from core.viewsets import BaseViewSet, BaseReadOnlyViewSet
 from django.db import models
 from django.utils import timezone
 from .models import (
@@ -13,22 +11,15 @@ from .serializers import (
 )
 from .logic import calculate_test_results
 
-
-class TestBatteryViewSet(viewsets.ModelViewSet):
+class TestBatteryViewSet(BaseViewSet):
     serializer_class = TestBatterySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        clinic = getattr(self.request.user, 'clinic', None)
-        if clinic:
-            return TestBattery.objects.filter(clinic=clinic)
-        return TestBattery.objects.none()
+        # BaseViewSet already filters by clinic
+        return super().get_queryset()
 
-    def perform_create(self, serializer):
-        serializer.save(clinic=self.request.user.clinic)
-
-
-class PsychologicalTestViewSet(viewsets.ReadOnlyModelViewSet):
+class PsychologicalTestViewSet(BaseReadOnlyViewSet):
     """
     Catálogo de Tests Psicológicos disponibles.
     """
@@ -38,12 +29,14 @@ class PsychologicalTestViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         clinic = getattr(self.request.user, 'clinic', None)
+        # We need custom logic here: clinic-specific OR global (null clinic)
+        base_qs = super().get_queryset() # This will only return clinic-specific tests if model is ClinicAware
+        # For catalogue, we might want to return global ones too
         return PsychologicalTest.objects.filter(
             models.Q(clinic=clinic) | models.Q(clinic__isnull=True)
         )
 
-
-class TestApplicationViewSet(viewsets.ModelViewSet):
+class TestApplicationViewSet(BaseViewSet):
     """
     Gestión de Aplicaciones de Tests.
     """
@@ -52,8 +45,7 @@ class TestApplicationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        clinic = getattr(user, 'clinic', None)
-        base_qs = TestApplication.objects.filter(clinic=clinic)
+        base_qs = super().get_queryset()
 
         if user.role == 'PATIENT':
             return base_qs.filter(patient__user=user).exclude(
@@ -66,10 +58,6 @@ class TestApplicationViewSet(viewsets.ModelViewSet):
 
         # Especialista/Admin ve todos los de su clínica
         return base_qs
-
-    def perform_create(self, serializer):
-        clinic = getattr(self.request.user, 'clinic', None)
-        serializer.save(clinic=clinic)
 
     @action(detail=False, methods=['get'])
     def my_pending(self, request):
@@ -190,23 +178,24 @@ class TestApplicationViewSet(viewsets.ModelViewSet):
 
 # ─── Admin ViewSets (configuración del catálogo desde la Intranet) ───
 
-class DimensionViewSet(viewsets.ModelViewSet):
+class DimensionViewSet(BaseViewSet):
     """CRUD de dimensiones de un test."""
     serializer_class = DimensionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        clinic = getattr(self.request.user, 'clinic', None)
-        return Dimension.objects.filter(test__clinic=clinic)
+        # BaseViewSet filters by clinic if Dimension is ClinicAware
+        return super().get_queryset()
 
 
-class BaremoViewSet(viewsets.ModelViewSet):
+class BaremoViewSet(BaseViewSet):
     """CRUD de baremos/escalas de interpretación."""
     serializer_class = BaremoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         clinic = getattr(self.request.user, 'clinic', None)
+        # Custom logic for clinic OR global baremos
         return Baremo.objects.filter(
             models.Q(clinic=clinic) | models.Q(clinic__isnull=True)
         )

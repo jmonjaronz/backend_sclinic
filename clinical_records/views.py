@@ -14,10 +14,10 @@ from .serializers import (
 )
 from .services import AutocompleteService, PrescriptionService
 from django.db.models import Q
-from core.mixins import ClinicIsolationMixin
+from core.viewsets import BaseViewSet
 from users.models import User
 
-class ClinicalRecordViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class ClinicalRecordViewSet(BaseViewSet):
     """
     Gestión de Expedientes Clínicos.
     Los psicólogos solo ven los expedientes a los que están asignados o en los que tienen notas.
@@ -43,7 +43,7 @@ class ClinicalRecordViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
         # Otros roles (Pacientes, Empresas) no deberían acceder a registros clínicos directos.
         return base_qs.none()
 
-class SessionNoteViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class SessionNoteViewSet(BaseViewSet):
     """
     Notas de Sesión o Evoluciones.
     Permite el CRUD básico, sujeto a reglas de inmutabilidad (is_locked).
@@ -117,37 +117,37 @@ class SessionNoteViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(note)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class EmergencyAdmissionViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class EmergencyAdmissionViewSet(BaseViewSet):
     queryset = EmergencyAdmission.objects.all()
     serializer_class = EmergencyAdmissionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class HospitalizationViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class HospitalizationViewSet(BaseViewSet):
     queryset = Hospitalization.objects.all()
     serializer_class = HospitalizationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class TreatmentViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class TreatmentViewSet(BaseViewSet):
     queryset = Treatment.objects.all()
     serializer_class = TreatmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class VitalSignsViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class VitalSignsViewSet(BaseViewSet):
     queryset = VitalSigns.objects.all()
     serializer_class = VitalSignsSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class PrenatalControlViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class PrenatalControlViewSet(BaseViewSet):
     queryset = PrenatalControl.objects.all()
     serializer_class = PrenatalControlSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class NeonatalControlViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class NeonatalControlViewSet(BaseViewSet):
     queryset = NeonatalControl.objects.all()
     serializer_class = NeonatalControlSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class PrescriptionViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class PrescriptionViewSet(BaseViewSet):
     """
     Gestión de Recetas Médicas con validación de alergias.
     """

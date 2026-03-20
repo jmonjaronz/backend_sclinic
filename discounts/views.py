@@ -1,14 +1,11 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from core.viewsets import BaseViewSet
 from .models import Benefit
 from .serializers import BenefitSerializer
 from .logic import calculate_final_price
 from patients.models import Patient
 from clinics.models import Service
 
-
-class BenefitViewSet(viewsets.ModelViewSet):
+class BenefitViewSet(BaseViewSet):
     """
     Gestión de las reglas de descuento.
     """

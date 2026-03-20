@@ -10,8 +10,8 @@ from .serializers import (
     SubscriptionSerializer, RoomSerializer, BedSerializer, 
     SpecialistScheduleSerializer, DynamicBrandingSerializer
 )
-from core.permissions import IsSuperAdmin
-from core.mixins import ClinicIsolationMixin
+from core.permissions import IsSuperAdmin, IsClinicStaff, ClinicHasModulePermission
+from core.viewsets import BaseViewSet, BaseReadOnlyViewSet
 from users.models import User
 
 class PublicClinicViewSet(viewsets.ReadOnlyModelViewSet):
@@ -80,33 +80,38 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     serializer_class = SubscriptionSerializer
     permission_classes = [IsSuperAdmin]
 
-class RoomViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class RoomViewSet(BaseViewSet):
+    """
+    Gestión de Consultorios/Habitaciones.
+    """
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsClinicStaff]
 
-class BedViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class BedViewSet(BaseViewSet):
+    """
+    Gestión de Camas o Puestos.
+    """
     queryset = Bed.objects.all()
     serializer_class = BedSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsClinicStaff]
 
-class SpecialistScheduleViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class SpecialistScheduleViewSet(BaseViewSet):
+    """
+    Horarios Laborales de Especialistas.
+    """
     queryset = SpecialistSchedule.objects.all()
     serializer_class = SpecialistScheduleSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsClinicStaff]
 
-class BrandingViewSet(viewsets.ReadOnlyModelViewSet):
+class BrandingViewSet(BaseReadOnlyViewSet):
     """
     Endpoint para obtener la configuración visual de la clínica actual.
     """
+    queryset = DynamicBrandingEngine.objects.all()
     serializer_class = DynamicBrandingSerializer
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        clinic = getattr(self.request, 'clinic', None)
-        if clinic:
-            return DynamicBrandingEngine.objects.filter(clinic=clinic)
-        return DynamicBrandingEngine.objects.none()
-
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        # BaseReadOnlyViewSet will handle clinic filtering via ClinicIsolationMixin
+        return super().get_queryset()
