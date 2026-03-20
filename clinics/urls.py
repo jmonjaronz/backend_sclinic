@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     PublicClinicViewSet, PublicHeadquartersViewSet, PublicServiceViewSet,
     PublicSpecialistViewSet, SubscriptionPlanViewSet, SubscriptionViewSet,
-    AdminClinicViewSet, RoomViewSet, BedViewSet, SpecialistScheduleViewSet
+    AdminClinicViewSet, RoomViewSet, BedViewSet, SpecialistScheduleViewSet,
+    BrandingViewSet
 )
 from .admin_views import SuperAdminDashboardView
 
@@ -18,6 +19,7 @@ router.register(r'admin/clinics', AdminClinicViewSet, basename='admin-clinics')
 router.register(r'rooms', RoomViewSet, basename='rooms')
 router.register(r'beds', BedViewSet, basename='beds')
 router.register(r'schedules', SpecialistScheduleViewSet, basename='schedules')
+router.register(r'branding', BrandingViewSet, basename='branding')
 
 urlpatterns = [
     path('admin/dashboard/', SuperAdminDashboardView.as_view(), name='superadmin-dashboard'),

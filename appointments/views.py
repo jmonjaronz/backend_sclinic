@@ -5,6 +5,7 @@ from django.utils import timezone
 import datetime
 from .models import Appointment, AvailabilityBlock, TreatmentPlan, AppointmentHistory, AppointmentSoftLock
 from .serializers import AppointmentSerializer, AvailabilityBlockSerializer, TreatmentPlanSerializer, AppointmentHistorySerializer
+from clinics.services import UsageService
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     """
@@ -36,6 +37,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         clinic = serializer.validated_data.get('clinic', getattr(user, 'clinic', None))
         
+        if not clinic:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No se pudo determinar la clínica para esta cita.")
+
+        # VALIDACIÓN DE CUOTA (appointments_monthly)
+        UsageService.check_and_increment(clinic, 'appointments_monthly')
+
         extra_data = {'clinic': clinic}
         
         if user.role == 'COMPANY' and hasattr(user, 'managed_company'):

@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import Headquarters, Specialty, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed, SpecialistSchedule
+from .models import (
+    Headquarters, Specialty, Service, Specialist, SubscriptionPlan, 
+    Subscription, Room, Bed, SpecialistSchedule, DynamicBrandingEngine
+)
 from core.models import Clinic
 
 class HeadquartersSerializer(serializers.ModelSerializer):
@@ -33,7 +36,7 @@ class ClinicSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Clinic
-        fields = ['id', 'name', 'subdomain', 'is_active', 'headquarters', 'specialties', 'services', 'subscription_plan']
+        fields = ['id', 'name', 'subdomain', 'status', 'headquarters', 'specialties', 'services', 'subscription_plan']
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     class Meta:
@@ -67,3 +70,8 @@ class SpecialistScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecialistSchedule
         fields = '__all__'
+
+class DynamicBrandingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DynamicBrandingEngine
+        fields = ['logo_url', 'primary_color', 'secondary_color', 'nomenclature_patient', 'nomenclature_specialist']

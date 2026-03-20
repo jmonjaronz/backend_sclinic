@@ -97,18 +97,29 @@ Ejemplo:
     - consultas raw()
     - errores en código
     - tareas asíncronas (Celery)
-### 4.2 Base Model Obligatorio
+- Todas las tablas multi-tenant deben incluir índices por clinic_id para optimizar consultas
+### 4.2 Procesos Asíncronos (Celery)
+- Las tareas async deben recibir explícitamente el clinic_id
+- Está PROHIBIDO ejecutar tareas sin contexto de clínica
+Ejemplo:
+  - process_lab_result(clinic_id, order_id)
+Regla:
+  - Dentro de la tarea:
+    - Se debe establecer el contexto de clínica antes de ejecutar lógica
+    - La tarea debe establecer el contexto global de clínica antes de ejecutar lógica:
+        - set_current_clinic(clinic_id)
+### 4.3 Base Model Obligatorio
 - Todos los modelos deben heredar de una clase base (Ejemplo):
     class TenantModel(models.Model):
         clinic = ForeignKey(Clinic)
 
         class Meta:
             abstract = True
-    Validación en escritura
+- Validación en escritura
     def save(self, *args, **kwargs):
         if not self.clinic_id:
             raise Exception("Clinic is required")   
-### 4.3 ClinicGlobalManager (Aislamiento a nivel de Modelo)
+### 4.4 ClinicGlobalManager (Aislamiento a nivel de Modelo)
 - **Descripción:** 
     - El aislamiento de datos entre clínicas debe implementarse a nivel del modelo de datos, no únicamente en las vistas o endpoints.
     - Para ello se utilizará un Manager personalizado de Django, encargado de aplicar automáticamente el filtro de clínica en todas las consultas.
@@ -133,7 +144,29 @@ Ejemplo:
       - prefetch_related
       - consultas complejas
     - Por eso NO es suficiente por sí solo
-### 4.4 MultiDomainMiddleware (Identificación Dinámica de Clínicas)
+  - El contexto debe limpiarse al finalizar la request
+#### 4.4.1 Contexto Global de Clínica (Thread Local / ContextVar)
+- Para que el ClinicGlobalManager funcione correctamente, el sistema debe mantener el contexto de la clínica activa durante todo el ciclo de la request.
+- Este contexto será utilizado por:
+  - Managers (ClinicGlobalManager)
+  - Servicios internos
+  - Validaciones de negocio
+  - Tareas asíncronas (Celery)
+- Flujo de funcionamiento:
+  1. MultiDomainMiddleware identifica la clínica
+  2. Se establece el contexto global:
+     - set_current_clinic(clinic)
+  3. Cualquier componente puede acceder mediante:
+     - get_current_clinic()
+- Ejemplo conceptual:
+  set_current_clinic(clinic_actual)
+  clinic = get_current_clinic()
+- Regla crítica:
+  - Si no existe contexto de clínica:
+    - NO se permite ejecutar consultas
+    - El sistema debe fallar de forma segura
+
+### 4.5 MultiDomainMiddleware (Identificación Dinámica de Clínicas)
 - **Descripción:** 
     - Este componente es responsable de identificar qué clínica está realizando la solicitud al sistema.
     - Funciona como un motor de detección de inquilino (tenant) basado en el dominio o subdominio desde el cual se accede al sistema.
@@ -164,7 +197,10 @@ Ejemplo:
     - **Falla segura:**
         - Si no se encuentra clínica:
             - NO se responde la solicitud
-### 4.5 Aislamiento en API (ClinicIsolationMixin)
+    - El dominio debe normalizarse antes de la validación:
+        - lowercase
+        - sin espacios
+### 4.6 Aislamiento en API (ClinicIsolationMixin)
 - **Descripción:** 
     - Se debe implementar un BaseViewSet obligatorio -> TODOS los endpoints de la API deben heredar de una misma clase base, donde centralizas la seguridad.
     - Su objetivo es garantizar que todas las consultas realizadas desde la API estén restringidas a la clínica correspondiente al usuario autenticado.
@@ -175,6 +211,8 @@ Ejemplo:
     - **Restricción automática de consultas:** 
         - Sobrescribe el método encargado de obtener los datos para asegurar que los resultados estén siempre limitados a la clínica actual.
         - Esto garantiza que los parámetros enviados por el usuario no puedan modificar el alcance de los datos.
+        - Si el usuario no pertenece a la clínica:
+            - bloquear la operación
     - **Falla segura:** 
         - Si el sistema no puede identificar una clínica válida en la solicitud, la API no devolverá información.
         - En ese caso se responderá con un error de acceso o con un conjunto de datos vacío.
@@ -196,7 +234,7 @@ Ejemplo:
 
     def perform_create(self, serializer):
         serializer.save(clinic=self.request.clinic)
-### 4.6 DynamicBrandingEngine
+### 4.7 DynamicBrandingEngine
 - **Descripción:** 
     - Componente encargado de gestionar la identidad visual personalizada de cada clínica.
     - Este motor permite que el frontend obtenga la configuración visual correspondiente y la aplique dinámicamente.
@@ -209,7 +247,7 @@ Ejemplo:
     - GET /api/branding/
 - **Ejemplo:**
     {
-      "logo": "https://cdn/logo.png",
+      "logo_url": "https://cdn/logo.png",
       "primary_color": "#0A1AFF",
       "labels": {
         "patients": "Clientes"
@@ -218,13 +256,19 @@ Ejemplo:
 - **Consideraciones:**
     - Uso de CDN (Content Delivery Network/Red de Distribución de Contenido) para imágenes (considerar futuramente)
     - Cache en frontend (localStorage)
-### 4.7 Feature Toggling
+### 4.8 Feature Toggling
 - **Descripción:** 
     - Sistema encargado de activar o desactivar funcionalidades del sistema según el contrato comercial de cada clínica.
     - Cada funcionalidad del sistema puede controlarse mediante un interruptor lógico (feature flag).
 - **Alcance:**
     - Esto permite habilitar módulos específicos sin necesidad de modificar el código ni desplegar nuevas versiones del sistema.
+    - Las validaciones de features deben aplicarse en:
+        - Nivel de ViewSet (API)
+        - Nivel de servicio (lógica de negocio)
+        - NO solo en frontend
 - **Flags Iniciales del Sistema:**
+    - Se recomienda implementar decoradores:
+        - @feature_required("module_laboratory")
     - El sistema deberá considerar por defecto los siguientes módulos activables:
         - `module_psychology`: habilita evaluaciones psicológicas, baremos y notas de evolución mental.
         - `module_laboratory`: habilita la gestión de exámenes de laboratorio.
@@ -239,18 +283,72 @@ Ejemplo:
         raise PermissionDenied
 - **Extensibilidad:**
     - Permite agregar nuevos módulos sin cambiar arquitectura
-### 4.8 Sistema de Quotas
+### 4.9 Sistema de Quotas
 - **Descripción:** 
     - Sistema encargado de gestionar límites de uso asociados al plan contratado.
     - Estos límites permiten controlar el consumo de recursos y establecer diferentes niveles de servicio.
 - **Tabla de métricas:**
-    - `usage_metrics`
+    - UsageMetric (tabla usage_metrics)
 - **Validación en tiempo real:**
     - if current_usage >= limit:
         bloquear_operacion()
 - **Procesos adicionales:**
     - Jobs de reseteo mensual
     - Monitoreo de consumo  
+- **Consideraciones:**
+    - El sistema debe considerar concurrencia:
+    - Ejemplo:
+        - Dos requests simultáneos intentando crear citas
+    - Solución:
+        - Uso de:
+            - locks
+            - o validación transaccional en DB
+### 4.10 Auditoría (Dependencia Transversal)
+- **Descripción:** 
+    - Este módulo depende de un sistema de auditoría global que registre todas las acciones críticas realizadas sobre entidades multi-tenant.
+- **Obligatoriedad:**
+    - La auditoría es obligatoria para:
+        - cumplimiento legal
+        - trazabilidad de acciones
+        - seguridad del sistema
+- **Eventos que deben auditarse:**
+    - Acceso a datos sensibles
+        - consultas de información clínica
+        - accesos a datos de pacientes
+        - acceso a configuraciones de clínica
+    - Cambios en configuración SaaS
+        - activación/desactivación de features
+        - modificación de límites (quotas)
+        - cambios de estado de la clínica (active, suspended, disabled)
+    - Gestión de dominios
+        - creación de dominio
+        - modificación de dominio
+        - eliminación de dominio
+- **Información mínima a registrar:**
+    - Cada evento de auditoría debe incluir:
+        - usuario (quién realizó la acción)
+        - clínica (clinic_id)
+        - acción (create, update, delete, access)
+        - entidad afectada (ej: Clinic, Domain, Feature)
+        - datos antes del cambio (before)
+        - datos después del cambio (after)
+        - fecha y hora
+        - origen (IP, opcional pero recomendado)
+- **Ejemplo conceptual:**
+    - Cambio de feature:
+        - usuario: admin@clinica.com
+        - clinic_id: 10
+        - acción: update
+        - entidad: ClinicFeature
+        - before:
+            - module_laboratory: false
+        - after:
+            - module_laboratory: true
+        - fecha: 20-03-2026 10:30:00
+- **Consideraciones técnicas:**
+    - La auditoría debe implementarse de forma transversal (middleware, signals o capa de servicio)
+    - No debe depender de lógica manual en cada endpoint
+    - Debe ser inmutable (no editable)
 
 ## 5. Arquitectura de Plataforma
 ### 5.1 Separación de Sistemas
@@ -285,6 +383,7 @@ Ejemplo:
 - **Regla crítica:**
     - Si el Control Plane indica que la clínica está inactiva:
         - el sistema clínico debe bloquear acceso
+    - La información del Control Plane debe cachearse temporalmente para evitar llamadas constantes
 
 ### 6. Casos Especiales / Edge Cases
 - Clínica suspendida por falta de pago

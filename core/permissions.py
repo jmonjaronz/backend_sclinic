@@ -1,20 +1,23 @@
 from rest_framework import permissions
-from clinics.models import ClinicModuleSubscription
+from users.models import User
+from core.utils.tenant_utils import has_feature
 
 class IsSuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'SUPERADMIN')
+        return bool(request.user and request.user.is_authenticated and request.user.role == User.Role.SUPERADMIN)
 
 class IsClinicStaff(permissions.BasePermission):
     """Admin, Psicólogo, Staff de la clínica."""
     def has_permission(self, request, view):
+        if not getattr(request, 'clinic', None):
+            return False
         return bool(request.user and request.user.is_authenticated and 
-                    request.user.role in ['ADMIN_CLINIC', 'PSYCHOLOGIST', 'STAFF', 'SUPERADMIN'])
+                    request.user.role in [User.Role.ADMIN_CLINIC, User.Role.SPECIALIST, User.Role.STAFF, User.Role.SUPERADMIN])
 
 class IsPatient(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and 
-                    (request.user.role == 'PATIENT' or request.user.role == 'SUPERADMIN'))
+                    (request.user.role == User.Role.PATIENT or request.user.role == User.Role.SUPERADMIN))
 
 class IsCompany(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -32,15 +35,7 @@ class ClinicHasModulePermission(permissions.BasePermission):
             return True
             
         clinic = getattr(request, 'clinic', None)
-        if not clinic:
-            return False 
-            
-        return ClinicModuleSubscription.objects.filter(
-            clinic=clinic,
-            module__name=module_name,
-            module__is_active_globally=True,
-            is_active=True
-        ).exists()
+        return has_feature(clinic, module_name)
 
 class PortalAccessPermission(permissions.BasePermission):
     """
@@ -52,20 +47,22 @@ class PortalAccessPermission(permissions.BasePermission):
         if not portal:
             return True # Not restricted by portal
             
+        clinic = getattr(request, 'clinic', None)
+        if not clinic:
+            return False
+
         user = request.user
         if not user or not user.is_authenticated:
             return False
             
-        from users.models import User
-        
         if portal == User.PortalType.INTRANET:
             # Must have an active role from the clinic
-            return user.active_role is not None and user.active_role.clinic == request.clinic
+            return user.active_role is not None and user.active_role.clinic == clinic
             
-        if portal == User.PortalType.PATIENT:
+        if portal == User.Role.PATIENT:
             return user.role == User.Role.PATIENT
             
-        if portal == User.PortalType.B2B:
+        if portal == User.Role.COMPANY:
             return user.role == User.Role.COMPANY
             
         return False

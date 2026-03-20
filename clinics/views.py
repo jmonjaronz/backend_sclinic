@@ -1,10 +1,14 @@
 from rest_framework import viewsets, permissions
 from core.models import Clinic
-from .models import Headquarters, Service, Specialist, SubscriptionPlan, Subscription, Room, Bed, SpecialistSchedule
+from .models import (
+    Headquarters, Service, Specialist, SubscriptionPlan, Subscription, 
+    Room, Bed, SpecialistSchedule, DynamicBrandingEngine
+)
 from .serializers import (
     ClinicSerializer, HeadquartersSerializer,
     ServiceSerializer, SpecialistSerializer, SubscriptionPlanSerializer,
-    SubscriptionSerializer, RoomSerializer, BedSerializer, SpecialistScheduleSerializer
+    SubscriptionSerializer, RoomSerializer, BedSerializer, 
+    SpecialistScheduleSerializer, DynamicBrandingSerializer
 )
 from core.permissions import IsSuperAdmin
 
@@ -12,7 +16,7 @@ class PublicClinicViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Public access to clinic data.
     """
-    queryset = Clinic.objects.filter(is_active=True)
+    queryset = Clinic.objects.filter(status=Clinic.Status.ACTIVE)
     serializer_class = ClinicSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = 'subdomain'
@@ -106,3 +110,21 @@ class SpecialistScheduleViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'clinic') and user.clinic:
             qs = qs.filter(specialist__clinic=user.clinic)
         return qs
+
+class BrandingViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Endpoint para obtener la configuración visual de la clínica actual.
+    """
+    serializer_class = DynamicBrandingSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        clinic = getattr(self.request, 'clinic', None)
+        if clinic:
+            return DynamicBrandingEngine.objects.filter(clinic=clinic)
+        return DynamicBrandingEngine.objects.none()
+
+    def list(self, request, *args, **kwargs):
+        # Sobrescribir list para devolver un objeto único en lugar de una lista si se prefiere
+        # pero mantenemos el estándar de ReadOnlyModelViewSet por ahora.
+        return super().list(request, *args, **kwargs)

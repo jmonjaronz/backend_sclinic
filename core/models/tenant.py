@@ -1,23 +1,40 @@
 import uuid
 from django.db import models
 
-import threading
+from contextvars import ContextVar
 
-# Thread-local storage para almacenar la clínica actual del request
-_thread_locals = threading.local()
+# Context variables para almacenar la clínica y el usuario actual del request (Async safe)
+_current_clinic = ContextVar("current_clinic", default=None)
+_current_user = ContextVar("current_user", default=None)
 
 def get_current_clinic():
-    return getattr(_thread_locals, 'clinic', None)
+    return _current_clinic.get()
 
 def set_current_clinic(clinic):
-    _thread_locals.clinic = clinic
+    _current_clinic.set(clinic)
+
+def get_current_user():
+    return _current_user.get()
+
+def set_current_user(user):
+    _current_user.set(user)
 
 class Clinic(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     subdomain = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Activa'
+        SUSPENDED = 'suspended', 'Suspendida'
+        DISABLED = 'disabled', 'Deshabilitada'
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        db_index=True
+    )
     
     # Configuración SaaS Base
     min_booking_days_notice = models.IntegerField(default=1, help_text="Días mínimos de anticipación para agendar.")
@@ -45,9 +62,10 @@ class ClinicGlobalManager(models.Manager):
     def get_queryset(self):
         qs = super().get_queryset()
         clinic = get_current_clinic()
-        if clinic:
-            return qs.filter(clinic=clinic)
-        return qs
+        if not clinic:
+            # Falla segura: Si no hay clínica activa en el contexto, no devolvemos nada
+            return qs.none()
+        return qs.filter(clinic=clinic)
 
     def get_global_queryset(self):
         """Método de escape para SuperAdmin/Tareas Cron"""
@@ -65,6 +83,9 @@ class ClinicAwareModel(models.Model):
 
     class Meta:
         abstract = True
+        indexes = [
+            models.Index(fields=['clinic', 'id']),
+        ]
 
     def save(self, *args, **kwargs):
         # Asignación automática de la clínica si no se provee
