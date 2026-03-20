@@ -11,6 +11,8 @@ from .serializers import (
     SpecialistScheduleSerializer, DynamicBrandingSerializer
 )
 from core.permissions import IsSuperAdmin
+from core.mixins import ClinicIsolationMixin
+from users.models import User
 
 class PublicClinicViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -38,7 +40,7 @@ class PublicHeadquartersViewSet(viewsets.ReadOnlyModelViewSet):
         clinic_id = self.request.query_params.get('clinic')
         if clinic_id:
             return self.queryset.filter(clinic_id=clinic_id)
-        return self.queryset
+        return self.queryset.none()
 
 class PublicServiceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Service.objects.all()
@@ -49,7 +51,7 @@ class PublicServiceViewSet(viewsets.ReadOnlyModelViewSet):
         clinic_id = self.request.query_params.get('clinic')
         if clinic_id:
             return self.queryset.filter(clinic_id=clinic_id)
-        return self.queryset
+        return self.queryset.none()
 
 class PublicSpecialistViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Specialist.objects.all()
@@ -60,7 +62,7 @@ class PublicSpecialistViewSet(viewsets.ReadOnlyModelViewSet):
         clinic_id = self.request.query_params.get('clinic')
         if clinic_id:
             return self.queryset.filter(clinic_id=clinic_id)
-        return self.queryset
+        return self.queryset.none()
 
 class SubscriptionPlanViewSet(viewsets.ModelViewSet):
     """
@@ -78,38 +80,20 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     serializer_class = SubscriptionSerializer
     permission_classes = [IsSuperAdmin]
 
-class RoomViewSet(viewsets.ModelViewSet):
+class RoomViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = Room.objects.all()
     serializer_class = RoomSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = Room.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(headquarters__clinic=user.clinic)
-        return qs
-
-class BedViewSet(viewsets.ModelViewSet):
+class BedViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = Bed.objects.all()
     serializer_class = BedSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = Bed.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(room__headquarters__clinic=user.clinic)
-        return qs
-
-class SpecialistScheduleViewSet(viewsets.ModelViewSet):
+class SpecialistScheduleViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = SpecialistSchedule.objects.all()
     serializer_class = SpecialistScheduleSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        qs = SpecialistSchedule.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(specialist__clinic=user.clinic)
-        return qs
 
 class BrandingViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -125,6 +109,4 @@ class BrandingViewSet(viewsets.ReadOnlyModelViewSet):
         return DynamicBrandingEngine.objects.none()
 
     def list(self, request, *args, **kwargs):
-        # Sobrescribir list para devolver un objeto único en lugar de una lista si se prefiere
-        # pero mantenemos el estándar de ReadOnlyModelViewSet por ahora.
         return super().list(request, *args, **kwargs)

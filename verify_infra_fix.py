@@ -1,47 +1,45 @@
 import os
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
-django.setup()
+def setup_django():
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+    django.setup()
 
 from core.models.tenant import Clinic, set_current_clinic, get_current_clinic
 from clinics.models import Headquarters
 from django.db import connection
 
 def verify_isolation():
-    print("--- Verificando Aislamiento Multi-Tenant ---")
+    setup_django()
+    from core.models.tenant import Clinic, set_current_clinic, get_current_clinic
+    from clinics.models import Headquarters
+    from clinics.views import PublicHeadquartersViewSet
+    from django.test import RequestFactory
+
+    # 1. Crear Clínicas de Prueba
+    c1, _ = Clinic.objects.get_or_create(name="Clinica A", subdomain="clinica-a")
+    c2, _ = Clinic.objects.get_or_create(name="Clinica B", subdomain="clinica-b")
+
+    # 2. Crear Datos Aislados en el manager global directo (sin contexto)
+    Headquarters.global_objects.get_or_create(name="HQ A", clinic=c1)
+    Headquarters.global_objects.get_or_create(name="HQ B", clinic=c2)
+
+    print("\n--- Verificando Aislamiento a Nivel de Manager (Fail-Closed) ---")
     
-    # 1. Crear clínicas de prueba
-    c1, _ = Clinic.objects.get_or_create(subdomain="clinic1", defaults={"name": "Clínica 1"})
-    c2, _ = Clinic.objects.get_or_create(subdomain="clinic2", defaults={"name": "Clínica 2"})
-    
-    # 2. Verificar que sin clínica el Manager devuelve NADA
+    # Caso 0: Sin contexto (Debe ser Vacío)
     set_current_clinic(None)
-    print(f"Clínica actual: {get_current_clinic()}")
-    hq_count = Headquarters.objects.count()
-    print(f"Sedes visibles sin clínica: {hq_count}")
-    assert hq_count == 0, "ERROR: El manager debe devolver 0 si no hay clínica set"
+    qs_none = Headquarters.objects.all()
+    print(f"Sin contexto: {qs_none.count()} sedes (Esperado: 0)")
+    assert qs_none.count() == 0, "ERROR: Se filtraron datos sin contexto de clínica!"
 
-    # 3. Crear datos para C1
+    # Caso 1: Contexto Clinica A
     set_current_clinic(c1)
-    h1, _ = Headquarters.objects.get_or_create(clinic=c1, name="Sede C1", defaults={"city": "Lima", "address": "Av A"})
-    print(f"Sedes visibles para C1: {Headquarters.objects.count()}")
-    
-    # 4. Cambiar a C2 y verificar aislamiento
+    qs_a = Headquarters.objects.all()
+    print(f"Contexto Clinica A: {qs_a.count()} sedes (Nombres: {[h.name for h in qs_a]})")
+    assert all(h.clinic == c1 for h in qs_a), "ERROR: Cruce de datos en Clinica A!"
+
+    # Caso 2: Contexto Clinica B
     set_current_clinic(c2)
-    print(f"Cambiando a Clínica 2...")
-    h2_count = Headquarters.objects.count()
-    print(f"Sedes visibles para C2: {h2_count}")
-    assert h2_count == 0, "ERROR: C2 no debería ver las sedes de C1"
-    
-    # Crear dato para C2
-    h2, _ = Headquarters.objects.get_or_create(clinic=c2, name="Sede C2", defaults={"city": "Cusco", "address": "Av B"})
-    print(f"Sedes visibles para C2 tras crear una: {Headquarters.objects.count()}")
-
-    # 5. Volver a C1
-    set_current_clinic(c1)
-    print(f"Volviendo a Clínica 1...")
-    print(f"Sedes visibles para C1: {Headquarters.objects.count()}")
     assert Headquarters.objects.count() == 1, "ERROR: C1 debe ver solo su propia sede"
 
     print("\n✅ AISLAMIENTO DE DATOS CORRECTO")

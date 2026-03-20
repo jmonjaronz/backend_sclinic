@@ -14,8 +14,10 @@ from .serializers import (
 )
 from .services import AutocompleteService, PrescriptionService
 from django.db.models import Q
+from core.mixins import ClinicIsolationMixin
+from users.models import User
 
-class ClinicalRecordViewSet(viewsets.ModelViewSet):
+class ClinicalRecordViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
     """
     Gestión de Expedientes Clínicos.
     Los psicólogos solo ven los expedientes a los que están asignados o en los que tienen notas.
@@ -25,25 +27,23 @@ class ClinicalRecordViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        base_qs = ClinicalRecord.objects.all()
+        # ClinicIsolationMixin already filters by clinic or returns none()
+        base_qs = super().get_queryset()
         
-        if hasattr(user, 'clinic') and user.clinic:
-            base_qs = base_qs.filter(clinic=user.clinic)
-
-        if user.role == 'PSYCHOLOGIST':
+        if user.role == User.Role.SPECIALIST or user.role == 'PSYCHOLOGIST': # Support both for safety
             # Ver registros asignados explícitamente O donde el psicólogo escribió una nota
             return base_qs.filter(
                 Q(assigned_specialists__user=user) | 
                 Q(session_notes__specialist__user=user)
             ).distinct()
             
-        elif user.role in ['ADMIN_CLINIC', 'SUPERADMIN']:
+        elif user.role in [User.Role.ADMIN_CLINIC, User.Role.SUPERADMIN]:
             return base_qs
 
         # Otros roles (Pacientes, Empresas) no deberían acceder a registros clínicos directos.
-        return ClinicalRecord.objects.none()
+        return base_qs.none()
 
-class SessionNoteViewSet(viewsets.ModelViewSet):
+class SessionNoteViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
     """
     Notas de Sesión o Evoluciones.
     Permite el CRUD básico, sujeto a reglas de inmutabilidad (is_locked).
@@ -53,18 +53,15 @@ class SessionNoteViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        base_qs = SessionNote.objects.all()
+        base_qs = super().get_queryset()
 
-        if hasattr(user, 'clinic') and user.clinic:
-            base_qs = base_qs.filter(record__clinic=user.clinic)
-
-        if user.role == 'PSYCHOLOGIST':
+        if user.role == User.Role.SPECIALIST or user.role == 'PSYCHOLOGIST':
             return base_qs.filter(specialist__user=user)
         
-        elif user.role in ['ADMIN_CLINIC', 'SUPERADMIN']:
+        elif user.role in [User.Role.ADMIN_CLINIC, User.Role.SUPERADMIN]:
             return base_qs
 
-        return SessionNote.objects.none()
+        return base_qs.none()
 
     def perform_destroy(self, instance):
         if instance.is_locked:
@@ -120,85 +117,43 @@ class SessionNoteViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(note)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class EmergencyAdmissionViewSet(viewsets.ModelViewSet):
+class EmergencyAdmissionViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = EmergencyAdmission.objects.all()
     serializer_class = EmergencyAdmissionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = EmergencyAdmission.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(clinic=user.clinic)
-        return qs
-
-class HospitalizationViewSet(viewsets.ModelViewSet):
+class HospitalizationViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = Hospitalization.objects.all()
     serializer_class = HospitalizationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = Hospitalization.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(bed__room__headquarters__clinic=user.clinic)
-        return qs
-
-class TreatmentViewSet(viewsets.ModelViewSet):
+class TreatmentViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = Treatment.objects.all()
     serializer_class = TreatmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = Treatment.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(record__clinic=user.clinic)
-        return qs
-
-class VitalSignsViewSet(viewsets.ModelViewSet):
+class VitalSignsViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = VitalSigns.objects.all()
     serializer_class = VitalSignsSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = VitalSigns.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(clinic=user.clinic)
-        return qs
-
-class PrenatalControlViewSet(viewsets.ModelViewSet):
+class PrenatalControlViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = PrenatalControl.objects.all()
     serializer_class = PrenatalControlSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = PrenatalControl.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(record__clinic=user.clinic)
-        return qs
-
-class NeonatalControlViewSet(viewsets.ModelViewSet):
+class NeonatalControlViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+    queryset = NeonatalControl.objects.all()
     serializer_class = NeonatalControlSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = NeonatalControl.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(record__clinic=user.clinic)
-        return qs
-
-class PrescriptionViewSet(viewsets.ModelViewSet):
+class PrescriptionViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
     """
     Gestión de Recetas Médicas con validación de alergias.
     """
+    queryset = Prescription.objects.all()
     serializer_class = PrescriptionSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        qs = Prescription.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            qs = qs.filter(clinic=user.clinic)
-        return qs
 
     def create(self, request, *args, **kwargs):
         # Validación PROACTIVA de Alergias antes de crear
