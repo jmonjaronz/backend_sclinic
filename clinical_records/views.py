@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from .models import (
-    ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, 
+    ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment,
     VitalSigns, PrenatalControl, NeonatalControl, Prescription
 )
 from .serializers import (
@@ -17,6 +17,7 @@ from django.db.models import Q
 from core.viewsets import BaseViewSet
 from core.mixins import ClinicalAuditReadMixin
 from users.models import User
+from users.consent_service import ConsentService
 
 class ClinicalRecordViewSet(ClinicalAuditReadMixin, BaseViewSet):
     """
@@ -33,19 +34,30 @@ class ClinicalRecordViewSet(ClinicalAuditReadMixin, BaseViewSet):
         user = self.request.user
         # ClinicIsolationMixin already filters by clinic or returns none()
         base_qs = super().get_queryset()
-        
+
         if user.role == User.Role.SPECIALIST or user.role == 'PSYCHOLOGIST': # Support both for safety
             # Ver registros asignados explícitamente O donde el psicólogo escribió una nota
             return base_qs.filter(
-                Q(assigned_specialists__user=user) | 
+                Q(assigned_specialists__user=user) |
                 Q(session_notes__specialist__user=user)
             ).distinct()
-            
+
         elif user.role in [User.Role.ADMIN_CLINIC, User.Role.SUPERADMIN]:
             return base_qs
 
         # Otros roles (Pacientes, Empresas) no deberían acceder a registros clínicos directos.
         return base_qs.none()
+
+    def perform_create(self, serializer):
+        """
+        Valida consentimiento clínico del paciente antes de crear el expediente.
+        Req: 2_Usuarios_Permisos.md sec. 4.6 - ConsentManagement Activo.
+        """
+        patient = serializer.validated_data.get('patient')
+        if patient:
+            ConsentService.assert_patient_has_valid_consent(patient, 'CLINICAL')
+        super().perform_create(serializer)
+
 
 class SessionNoteViewSet(ClinicalAuditReadMixin, BaseViewSet):
     """

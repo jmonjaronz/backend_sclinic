@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.exceptions import ValidationError
 from core.models import Clinic
 import uuid
 
@@ -104,6 +105,11 @@ class DynamicRole(models.Model):
 
     class Meta:
         unique_together = ('clinic', 'name')
+
+    def clean(self):
+        """Req: 2_Usuarios_Permisos.md sec 2.3 - Un rol debe tener al menos un permiso."""
+        if self.pk and not self.capabilities.exists():
+            raise ValidationError("El rol debe tener al menos un permiso asignado.")
 
     def __str__(self):
         return f"{self.name} ({self.clinic.name})"
