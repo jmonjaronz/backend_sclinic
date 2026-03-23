@@ -25,10 +25,15 @@ class MultiDomainMiddleware(MiddlewareMixin):
         # 2. Si no hay header, intentar obtenerlo del Host (ej: empresa-a.sclinic.com)
         if not subdomain:
             host = request.get_host().split(':')[0] # Ignorar puerto
+            
+            # PROTECCIÓN: Host Header Attack
+            allowed_domains = getattr(settings, 'ALLOWED_TENANT_DOMAINS', [])
+            if allowed_domains and not any(host.endswith(domain) for domain in allowed_domains):
+                return HttpResponseForbidden("Host Header Attack Detectado o Dominio No Autorizado.")
+                
             host_parts = host.split('.')
             if len(host_parts) > 2:
                 # Caso: subdominio.dominio.com -> tomamos 'subdominio'
-                # TODO: Validar contra un dominio base configurado (ej: sclinic.com)
                 subdomain = host_parts[0]
             else:
                 subdomain = None

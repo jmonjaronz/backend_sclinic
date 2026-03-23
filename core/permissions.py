@@ -62,7 +62,34 @@ class PortalAccessPermission(permissions.BasePermission):
         if portal == User.Role.PATIENT:
             return user.role == User.Role.PATIENT
             
+            
         if portal == User.Role.COMPANY:
             return user.role == User.Role.COMPANY
             
         return False
+
+class HasCapabilityPermission(permissions.BasePermission):
+    """
+    Verifica que el usuario tenga la capacidad (permiso granular) requerida.
+    La vista debe definir `required_capabilities = {'list': 'modulo.recurso.read', ...}`
+    o `required_capability = 'modulo.recurso.read'` de forma general.
+    """
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        # Si es un dict por accion (ej. list, create, destroy):
+        required_caps = getattr(view, 'required_capabilities', {})
+        if required_caps:
+            required_cap = required_caps.get(view.action)
+            if not required_cap:
+                return True
+            return user.has_permission(required_cap)
+            
+        # Fallback a string general
+        required_cap = getattr(view, 'required_capability', None)
+        if not required_cap:
+            return True
+            
+        return user.has_permission(required_cap)

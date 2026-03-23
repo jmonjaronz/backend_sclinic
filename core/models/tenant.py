@@ -67,7 +67,7 @@ class ClinicGlobalManager(models.Manager):
         clinic = get_current_clinic()
         if not clinic:
             # Falla segura: Si no hay clínica activa en el contexto, no devolvemos nada
-            logger.warning(f"Acceso a {self.model.__name__} sin contexto de clínica activo.")
+            logger.debug(f"Acceso a {self.model.__name__} sin contexto de clínica activo.")
             return qs.none()
         return qs.filter(clinic=clinic)
 

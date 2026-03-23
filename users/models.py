@@ -43,6 +43,21 @@ class User(AbstractUser):
             return True
         return False
 
+    def has_permission(self, permission_codename):
+        """
+        Verifica si el rol activo del usuario cuenta con el Capability específico.
+        Formato esperado: <modulo>.<recurso>.<accion> (ej: patient.record.read)
+        """
+        # SuperAdmins tienen acceso total por defecto
+        if self.role == self.Role.SUPERADMIN:
+            return True
+        
+        # Debe tener un rol activo seleccionado
+        if getattr(self, 'active_role', None) and self.active_role.is_active:
+            return self.active_role.capabilities.filter(codename=permission_codename).exists()
+            
+        return False
+
 
 # ---------------------------------------------------------------------------
 # 2. Sistema de Roles Dinámicos (requerimiento 2_Usuarios_Permisos.md)
@@ -60,6 +75,20 @@ class Capability(models.Model):
 
     def __str__(self):
         return self.codename
+
+
+class RoleTemplate(models.Model):
+    """
+    Plantillas base globales del sistema (ej: ROLE_TEMPLATE_DOCTOR).
+    Las clínicas clonan estas plantillas para crear sus propios DynamicRoles.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True, help_text="Ej: ROLE_TEMPLATE_DOCTOR")
+    description = models.TextField(blank=True)
+    capabilities = models.ManyToManyField(Capability, blank=True, related_name='templates')
+    
+    def __str__(self):
+        return self.name
 
 
 class DynamicRole(models.Model):

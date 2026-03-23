@@ -13,6 +13,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# Host Header Security - MultiTenant Isolation
+ALLOWED_TENANT_DOMAINS = os.getenv('ALLOWED_TENANT_DOMAINS', 'sclinic.com,localhost,127.0.0.1').split(',')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

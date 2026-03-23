@@ -39,3 +39,46 @@ class ClinicIsolationMixin:
             serializer.save(clinic=clinic)
         else:
             raise PermissionDenied("Debe realizar la petición desde un contexto de clínica válido.")
+
+
+class ClinicalAuditReadMixin:
+    """
+    Mixin para registrar automáticamente (audit) cuando un usuario accede (GET) a un recurso clínico sensible.
+    Para que funcione correctamente, el ViewSet debe heredar este Mixin y definir `audit_resource_type`.
+    Opcionalmente se puede definir el método `get_audit_patient_id(instance)`.
+    """
+    audit_resource_type = None
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        
+        # Ejecutar la auditoría solo en respuestas exitosas
+        if response.status_code == 200:
+            try:
+                from users.services import ClinicalAuditService
+                from users.models import ClinicalAuditLog
+                
+                instance = self.get_object()
+                patient_id = self.get_audit_patient_id(instance) if hasattr(self, 'get_audit_patient_id') else None
+                resource_type = self.audit_resource_type or instance.__class__.__name__
+                
+                # Identificar acción por defecto o inferida
+                action = ClinicalAuditLog.ActionType.VIEW_RECORD
+                if resource_type == 'SessionNote':
+                    action = ClinicalAuditLog.ActionType.VIEW_NOTE
+                elif resource_type == 'MedicalResult':
+                    action = ClinicalAuditLog.ActionType.VIEW_RESULT
+                    
+                ClinicalAuditService.log_action(
+                    request=request,
+                    action=action,
+                    resource_type=resource_type,
+                    resource_id=instance.pk,
+                    patient_id=patient_id
+                )
+            except Exception as e:
+                # Falla silenciosa permitida para logs de lectura, no debe interrumpir el GET principal
+                # TODO: Enviar a logger (Sentry) en el futuro
+                print(f"[Audit Error] Failed to log read access: {str(e)}")
+                
+        return response

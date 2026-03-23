@@ -106,10 +106,13 @@ Este módulo controla:
       - module_laboratory = false
       - todos los permisos lab.* quedan inválidos
 ### 2.5 Acceso a portales
-  - El acceso depende del tipo de portal:
-    - Intranet → roles clínicos
-    - Paciente → solo sus datos
-    - Empresa → acceso restringido
+  - Tipos de portales
+    - Intranet	Staff clínico	Roles + permisos
+    - Paciente	Pacientes	Solo su data
+    - B2B	Empresas	Data restringida
+  - Regla técnica
+    - Cada request debe validar:
+      - view.portal_type
 ### 2.6 Consentimiento del paciente
   - No se puede:
     - crear historia clínica
@@ -245,7 +248,7 @@ Este módulo controla:
   - Consentimiento granular por tipo de dato
   - Integración con firma digital
 
-## 7. Componente: PortalAccessControl (Control de Acceso por Portal)
+## 7. Componente: PortalAccessControl (Extensión)
 - **Descripción**
     - El sistema tendrá distintos portales de acceso diseñados para diferentes tipos de usuarios.
     - Cada portal tendrá restricciones específicas sobre la información que puede visualizar o gestionar.

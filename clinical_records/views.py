@@ -15,15 +15,19 @@ from .serializers import (
 from .services import AutocompleteService, PrescriptionService
 from django.db.models import Q
 from core.viewsets import BaseViewSet
+from core.mixins import ClinicalAuditReadMixin
 from users.models import User
 
-class ClinicalRecordViewSet(BaseViewSet):
+class ClinicalRecordViewSet(ClinicalAuditReadMixin, BaseViewSet):
     """
     Gestión de Expedientes Clínicos.
     Los psicólogos solo ven los expedientes a los que están asignados o en los que tienen notas.
     """
     serializer_class = ClinicalRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def get_audit_patient_id(self, instance):
+        return instance.patient.id if instance.patient else None
 
     def get_queryset(self):
         user = self.request.user
@@ -43,13 +47,16 @@ class ClinicalRecordViewSet(BaseViewSet):
         # Otros roles (Pacientes, Empresas) no deberían acceder a registros clínicos directos.
         return base_qs.none()
 
-class SessionNoteViewSet(BaseViewSet):
+class SessionNoteViewSet(ClinicalAuditReadMixin, BaseViewSet):
     """
     Notas de Sesión o Evoluciones.
     Permite el CRUD básico, sujeto a reglas de inmutabilidad (is_locked).
     """
     serializer_class = SessionNoteSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_audit_patient_id(self, instance):
+        return instance.record.patient.id if instance.record and instance.record.patient else None
 
     def get_queryset(self):
         user = self.request.user

@@ -1,11 +1,18 @@
 from core.viewsets import BaseViewSet
+from core.mixins import ClinicalAuditReadMixin
+from rest_framework import permissions
 from .models import MedicalResult
 from .serializers import MedicalResultSerializer
 
-class MedicalResultViewSet(BaseViewSet):
+class MedicalResultViewSet(ClinicalAuditReadMixin, BaseViewSet):
     """
     Gestión de Resultados Médicos (Laboratorio e Imágenes).
     """
+    serializer_class = MedicalResultSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_audit_patient_id(self, instance):
+        return instance.patient.id if instance.patient else None
     serializer_class = MedicalResultSerializer
     permission_classes = [permissions.IsAuthenticated]
 
