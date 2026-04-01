@@ -28,11 +28,43 @@ class Service(models.Model):
     max_capacity = models.IntegerField(default=1) # Para talleres o evaluaciones presenciales
 
 class Specialist(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'ACTIVE', 'Activo'
+        INACTIVE = 'INACTIVE', 'Inactivo'
+        SUSPENDED = 'SUSPENDED', 'Suspendido'
+
+    class Type(models.TextChoices):
+        INTERNAL = 'INTERNAL', 'Interno'
+        EXTERNAL = 'EXTERNAL', 'Externo'
+        AGREEMENT = 'AGREEMENT', 'Convenio'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE)
-    user = models.OneToOneField('users.User', on_delete=models.CASCADE)
-    specialties = models.ManyToManyField(Specialty)
+    
+    # Identidad Desacoplada
+    user = models.OneToOneField('users.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='specialist_profile')
+    first_name = models.CharField(max_length=100, default='')
+    last_name = models.CharField(max_length=100, default='')
+    document_type = models.CharField(max_length=20, default='DNI')
+    document_number = models.CharField(max_length=50, default='')
+    
+    # Historial Profesional
+    specialty_main = models.ForeignKey(Specialty, on_delete=models.SET_NULL, null=True, related_name='main_specialists')
+    subspecialties = models.ManyToManyField(Specialty, related_name='sub_specialists', blank=True)
+    cmp_number = models.CharField(max_length=50, blank=True, help_text="Número de Colegiatura Profesional")
+    college = models.CharField(max_length=100, blank=True, default='CMP')
+    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    specialist_type = models.CharField(max_length=20, choices=Type.choices, default=Type.INTERNAL)
+    
     bio = models.TextField(blank=True)
     
+    # Logística y Vinculación
+    services = models.ManyToManyField(Service, related_name='specialists', blank=True)
+    headquarters = models.ManyToManyField('clinics.Headquarters', related_name='specialists', blank=True)
+
+    class Meta:
+        unique_together = ('clinic', 'document_type', 'document_number')
+
     def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name}"
+        return f"{self.first_name} {self.last_name}".strip() or "Especialista Sin Nombre"

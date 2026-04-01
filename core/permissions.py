@@ -55,7 +55,13 @@ class PortalAccessPermission(permissions.BasePermission):
         user = request.user
         if not user or not user.is_authenticated:
             return False
-            
+
+        # Validación cruzada de App-Context vs Portal de la Vista
+        if hasattr(request, 'auth') and request.auth:
+            token_context = request.auth.get('app_context')
+            if token_context and token_context != portal:
+                return False
+                
         if portal == User.PortalType.INTRANET:
             # Must have an active role from the clinic
             return user.active_role is not None and user.active_role.clinic == clinic
