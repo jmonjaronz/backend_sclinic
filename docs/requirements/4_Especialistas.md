@@ -147,6 +147,26 @@ Este módulo gestiona la información profesional y la disponibilidad operativa 
     - Esto es clave para:
         - evitar conflictos de privacidad
         - evitar accesos indebidos a información médica
+### 4.3. Vinculación con usuario del sistema
+- El sistema debe permitir asociar un especialista con una cuenta de usuario del sistema.
+- Esta asociación permite:
+    - acceso a la intranet clínica
+    - gestión de agenda
+    - atención de pacientes
+    - registro de historia clínica
+- Reglas:
+    - No todos los especialistas deben tener usuario asociado.
+    - La vinculación puede realizarse posteriormente al registro.
+    - Un usuario solo puede estar vinculado a un especialista por clínica.
+### 4.4. Alcance multi-tenant
+- La asignación de sedes aplica únicamente dentro de una misma clínica.
+- Un especialista puede existir en múltiples clínicas (multi-tenant), pero:
+    - su configuración de sedes
+    - su disponibilidad
+    - sus servicios
+- son independientes por cada clínica.
+- Esto implica que:
+    - el mismo profesional puede tener diferentes horarios y servicios según la clínica.
 
 ## 5. Gestión de Disponibilidad del Especialista
 - **Descripción:**
