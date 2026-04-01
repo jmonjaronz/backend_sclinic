@@ -1,17 +1,23 @@
+#check_models.py
 import os
 import django
-import sys
-from django.core.management import call_command
 
-print("Setting up django...")
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+django.setup()
 
-try:
-    django.setup()
-    print("Django setup complete. Running checks...")
-    call_command('check')
-    print("SUCCESS: No issues found.")
-except Exception:
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+from django.apps import apps
+
+with open("check_out.txt", "w", encoding='utf-8') as f:
+    try:
+        users_app = apps.get_app_config('users')
+        f.write("Models in users app: " + str([m.__name__ for m in users_app.get_models()]) + "\n")
+        
+        # Test if makemigrations recognizes it programmatically
+        from django.core.management import call_command
+        import sys
+        f.write("Running call_command makemigrations...\n")
+        with open("makemig_out.txt", "w", encoding='utf-8') as sys.stdout:
+            call_command("makemigrations", "users", dry_run=True, verbosity=3)
+            
+    except Exception as e:
+        f.write(f"ERROR: {str(e)}\n")

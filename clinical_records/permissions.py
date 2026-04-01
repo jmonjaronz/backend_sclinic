@@ -1,3 +1,4 @@
+#clinical_records/permissions.py
 from rest_framework import permissions
 
 class IsAssignedSpecialist(permissions.BasePermission):

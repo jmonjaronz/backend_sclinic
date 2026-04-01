@@ -1,3 +1,4 @@
+#psychological_tests/models.py
 from django.db import models
 import uuid
 from core.models import Clinic

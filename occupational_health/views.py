@@ -1,11 +1,12 @@
-from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
+#occupational_health/views.py
+from core.viewsets import BaseViewSet
 from .models import OccupationalEvaluation, EvaluationServiceStatus, AptitudeDictum
 from .serializers import OccupationalEvaluationSerializer, EvaluationServiceStatusSerializer, AptitudeDictumSerializer
 from .services import OccupationalHealthService
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
-class OccupationalEvaluationViewSet(viewsets.ModelViewSet):
+class OccupationalEvaluationViewSet(BaseViewSet):
     queryset = OccupationalEvaluation.objects.all()
     serializer_class = OccupationalEvaluationSerializer
 
@@ -15,10 +16,10 @@ class OccupationalEvaluationViewSet(viewsets.ModelViewSet):
         services_created = OccupationalHealthService.initialize_evaluation_services(evaluation)
         return Response({'status': f'{services_created} services tracked from protocol.'})
 
-class EvaluationServiceStatusViewSet(viewsets.ModelViewSet):
+class EvaluationServiceStatusViewSet(BaseViewSet):
     queryset = EvaluationServiceStatus.objects.all()
     serializer_class = EvaluationServiceStatusSerializer
 
-class AptitudeDictumViewSet(viewsets.ModelViewSet):
+class AptitudeDictumViewSet(BaseViewSet):
     queryset = AptitudeDictum.objects.all()
     serializer_class = AptitudeDictumSerializer

@@ -29,6 +29,8 @@ erDiagram
     APPOINTMENT }|--|| SERVICE : "de"
     APPOINTMENT ||--o| SESSION_NOTE : "genera (vínculo 1:1)"
     APPOINTMENT }|--o| SPECIALIST : "atendido por"
+    APPOINTMENT ||--o{ APPOINTMENT_HISTORY : "audita cambios"
+    APPOINTMENT_SOFT_LOCK }|--|| SPECIALIST : "vínculo"
     APPOINTMENT_GROUP ||--o{ APPOINTMENT : "agrupa"
     TREATMENT_PLAN ||--o{ APPOINTMENT : "contiene sesiones"
     

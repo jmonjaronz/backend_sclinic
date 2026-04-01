@@ -1,18 +1,20 @@
-from rest_framework import status, permissions, viewsets
+#patients/views.py
+from rest_framework import status, permissions
+from core.viewsets import BaseViewSet
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from .models import Patient, PatientFamilyLink
 from .serializers import PatientRegistrationSerializer, PatientSerializer, PatientFamilyLinkSerializer
 
-class PatientFamilyLinkViewSet(viewsets.ModelViewSet):
+class PatientFamilyLinkViewSet(BaseViewSet):
     queryset = PatientFamilyLink.objects.all()
     serializer_class = PatientFamilyLinkSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        base_qs = PatientFamilyLink.objects.all()
+        base_qs = super().get_queryset()
         if user.role == 'PATIENT':
             return base_qs.filter(patient_origin__user=user)
         return base_qs
@@ -37,7 +39,7 @@ class PatientRegistrationView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class PatientViewSet(viewsets.ModelViewSet):
+class PatientViewSet(BaseViewSet):
     """
     Gestión de perfiles de pacientes.
     - Especialistas y Admins ven a todos los de su clínica.
@@ -48,12 +50,8 @@ class PatientViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Base query to all patients
-        base_qs = Patient.objects.all()
-
-        # Isolate by clinic
-        if hasattr(user, 'clinic') and user.clinic:
-            base_qs = base_qs.filter(clinic=user.clinic)
+        # super().get_queryset() isolates by clinic automatically
+        base_qs = super().get_queryset()
 
         if user.role == 'PATIENT':
             # Ver su propio perfil

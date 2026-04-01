@@ -1,3 +1,4 @@
+#clinics/models.py
 from django.db import models
 import uuid
 from django.conf import settings
@@ -325,3 +326,21 @@ class ServiceClinicalRestriction(ClinicAwareModel):
 
     def __str__(self):
         return f"Restricción {self.specialty_a.name} -> {self.specialty_b.name} ({self.min_gap_days} d)"
+
+
+class UsageMetric(ClinicAwareModel):
+    """
+    Rastreo del consumo de recursos para validación de cuotas.
+    Req: 1_Infraestructura.md sec. 4.9
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    metric_code = models.CharField(max_length=50, help_text="Ej: appointments_monthly, specialists_active")
+    value = models.PositiveIntegerField(default=0)
+    period = models.CharField(max_length=20, help_text="Ej: 2026-03, ALL_TIME")
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('clinic', 'metric_code', 'period')
+
+    def __str__(self):
+        return f"{self.clinic.name} - {self.metric_code} ({self.period}): {self.value}"

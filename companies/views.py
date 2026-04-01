@@ -1,10 +1,12 @@
-from rest_framework import viewsets, permissions, status
+#companies/views.py
+from rest_framework import permissions, status
+from core.viewsets import BaseViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Company, Agreement, CompanyEmployee
 from .serializers import CompanySerializer, AgreementSerializer, EmployeeSerializer, EmployeeRegistrationSerializer
 
-class CompanyViewSet(viewsets.ModelViewSet):
+class CompanyViewSet(BaseViewSet):
     """
     Management of B2B companies by Clinics. 
     Companies also use this to view their own profile.
@@ -14,19 +16,18 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        clinic = getattr(user, 'clinic', None)
+        base_qs = super().get_queryset()
         
         # If user is a company manager, they only see their company
         if hasattr(user, 'managed_company'):
-            return Company.objects.filter(id=user.managed_company.id)
+            return base_qs.filter(id=user.managed_company.id)
             
         # Clinicians see companies registered in their clinic
-        return Company.objects.filter(clinic=clinic)
+        return base_qs
 
-    def perform_create(self, serializer):
-        serializer.save(clinic=self.request.user.clinic)
+    # perform_create is handled by ClinicIsolationMixin in BaseViewSet
 
-class AgreementViewSet(viewsets.ModelViewSet):
+class AgreementViewSet(BaseViewSet):
     """
     Agreements management.
     """
@@ -35,14 +36,14 @@ class AgreementViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        clinic = getattr(user, 'clinic', None)
+        base_qs = super().get_queryset()
         
         if hasattr(user, 'managed_company'):
-            return Agreement.objects.filter(company=user.managed_company, is_active=True)
+            return base_qs.filter(company=user.managed_company, is_active=True)
             
-        return Agreement.objects.filter(clinic=clinic)
+        return base_qs
 
-class EmployeeViewSet(viewsets.ModelViewSet):
+class EmployeeViewSet(BaseViewSet):
     """
     Employee roster for a company.
     """
@@ -51,12 +52,12 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        base_qs = super().get_queryset()
         
         if hasattr(user, 'managed_company'):
-            return CompanyEmployee.objects.filter(company=user.managed_company)
+            return base_qs.filter(company=user.managed_company)
             
-        clinic = getattr(user, 'clinic', None)
-        return CompanyEmployee.objects.filter(company__clinic=clinic)
+        return base_qs
 
     def get_serializer_class(self):
         if self.action == 'create':

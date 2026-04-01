@@ -1,3 +1,4 @@
+#companies/serializers.py
 from rest_framework import serializers
 from .models import Company, Agreement, CompanyEmployee
 from patients.models import Patient

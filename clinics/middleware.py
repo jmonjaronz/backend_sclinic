@@ -1,3 +1,4 @@
+#clinics/middleware.py
 from django.utils.deprecation import MiddlewareMixin
 from clinics.models import Clinic
 
@@ -23,7 +24,7 @@ class ClinicMiddleware(MiddlewareMixin):
         # 3. Buscar la clínica
         if subdomain:
             try:
-                clinic = Clinic.objects.get(subdomain=subdomain, is_active=True)
+                clinic = Clinic.objects.get(subdomain=subdomain, status='active')
                 request.clinic = clinic
             except Clinic.DoesNotExist:
                 # Si el subdominio no existe y no es una ruta de admin/core, podríamos lanzar 404

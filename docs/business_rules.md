@@ -17,23 +17,27 @@ Este documento detalla la lógica central que rige el comportamiento de la plata
 - **Autenticación Triple**: Los gestores de empresas se validan con RUC, Razón Social, Usuario y Contraseña.
 - **Confidencialidad Médica**:
     - Las empresas **solamente** pueden visualizar resultados (médicos o psicológicos) de citas agendadas bajo un convenio B2B de su propia empresa.
-    - El historial personal y privado del paciente es inaccesible para la empresa.
-- **Regla de Ocultación**: Si un servicio está marcado como `is_confidential_to_patient` (ej: evaluaciones de pre-empleo), el paciente no podrá ver el resultado, aunque sea el sujeto de la evaluación.
-- **Descuentos**: Los convenios corporativos tienen prioridad sobre descuentos generales si el paciente es reconocido como empleado de la empresa en convenio.
+- **Salud Ocupacional**:
+    - **Hoja de Ruta**: Al iniciar una evaluación, el sistema genera automáticamente el listado de servicios a realizar basado en el protocolo asignado.
+    - **Dictamen de Aptitud**: Requiere que todos los servicios del protocolo tengan resultados registrados. Se emite como Apto, Apto con Restricciones o No Apto.
 
-## 3. Citas, Reprogramaciones y Anulaciones
-- **Validación de Pago**: Por defecto, las citas requieren validación de pago (voucher subido por la web) por parte del personal de `STAFF` antes de ser confirmadas.
-- **Días de Anticipación**: Las clínicas configuran un mínimo de días de anticipación para el agendamiento web.
-- **Reprogramaciones**:
-    - Cada clínica define el límite máximo de reprogramaciones permitidas por cita (`max_reschedules_allowed`, por defecto 2).
-    - El paciente debe reprogramar con una anticipación mínima definida por la clínica (`reschedule_notice_hours`, por defecto 24h).
-- **Anulaciones**:
-    - Las anulaciones por parte del paciente requieren un pre-aviso mínimo (`cancel_notice_hours`, por defecto 24h). El personal administrativo puede anular en cualquier momento.
-    - Se registra obligatoriamente el motivo de la anulación y queda guardado en la auditoría.
-- **Trazabilidad**: Todo cambio de estado, fecha u hora genera una entrada en el historial de la cita (`AppointmentHistory`) para auditoría.
-- **Capacidad**: Algunos servicios (talleres, evaluaciones grupales) pueden tener una `max_capacity` mayor a 1.
+## 3. Citas y Agenda
+- **Soft Lock (Bloqueo Temporal)**: Al seleccionar un horario, el sistema aplica un bloqueo de **3 minutos** para evitar que dos usuarios reserven el mismo slot simultáneamente.
+- **Automatización**: Las citas que superen su `payment_deadline` sin un voucher cargado son canceladas automáticamente por el sistema.
+- **Reprogramaciones y Anulaciones**:
+    - Se registra obligatoriamente el motivo y el usuario que realiza el cambio en `AppointmentHistory`.
+    - Se validan límites de frecuencia y plazos de pre-aviso configurables por cada clínica.
 
-## 4. Evaluaciones Psicológicas y Médicas
+## 4. Historia Clínica Electrónica (HCE)
+- **Validación Dinámica**: Las notas de sesión se validan mediante **JSON Schema** según la plantilla de la especialidad.
+- **Seguridad Médica (Alertas de Alergia)**: El motor de prescripciones bloquea la creación de recetas si detecta medicamentos que coincidan con las alergias del paciente, requiriendo una justificación médica explícita para forzar el registro.
+- **Codificación**: El sistema utiliza la codificación estándar **CIE-10/11** para el registro de diagnósticos.
+
+## 5. Seguros y Finanzas
+- **Cómputo Automático**: El sistema calcula en tiempo real el copago (monto fijo) y coaseguro (porcentaje) basado en el plan del paciente y la cobertura del servicio.
+- **Prioridad de Beneficios**: Si un paciente tiene seguro y convenio corporativo, el sistema aplica la regla de mayor beneficio para el paciente, a menos que la clínica configure lo contrario.
+
+## 6. Evaluaciones Psicológicas y Médicas
 - **Tests**: Cada test pertenece a una batería. Los especialistas asignan estas baterías a los pacientes.
 - **Vencimiento**: Los tests pueden tener un plazo de vencimiento (`valid_until`) para ser completados por el paciente.
 - **Scoring Avanzado**: 
@@ -41,7 +45,7 @@ Este documento detalla la lógica central que rige el comportamiento de la plata
     - **Baremos**: Se aplican tablas de normas tanto al puntaje total como a los puntajes por dimensión.
     - **Automatización**: La interpretación clínica ("Normal", "Moderado", etc.) se genera al instante tras completar el test.
 
-## 5. Emergencias y Hospitalización
+## 7. Emergencias y Hospitalización
 - **Triaje / Signos Vitales**: 
     - Se registran de forma independiente a la nota médica.
     - Generan un histórico de biometría (Peso, Talla, IMC) y signos vitales (Presión, Temp, SatO2, etc.).

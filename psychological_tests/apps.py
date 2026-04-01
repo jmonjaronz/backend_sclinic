@@ -1,3 +1,4 @@
+#psychological_tests/apps.py
 from django.apps import AppConfig
 
 class PsychologicalTestsConfig(AppConfig):

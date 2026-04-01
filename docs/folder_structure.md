@@ -1,66 +1,41 @@
-# Estructura de Carpetas - SCLINIC (ACTUALIZAR)
+# Estructura de Carpetas - SCLINIC
 
 El proyecto SCLINIC sigue una arquitectura **orientada a dominios**, donde cada funcionalidad principal reside en su propia aplicación Django. Esto facilita el mantenimiento y la escalabilidad del sistema SaaS.
 
 ## 📂 Directorios de Aplicación
 
 ### 🛡️ `core/`
-Contenido base del proyecto.
-- Configuraciones globales de Django (`settings.py`, `urls.py`).
-- Middleware multi-tenant.
-- Permisos globales (`IsSuperAdmin`).
-- Utilidades compartidas (`utils/`).
+- Configuraciones globales de Django, middleware multi-tenant y utilidades compartidas.
 
 ### 👤 `users/`
-Gestión de identidad y acceso.
-- Modelos de Usuario personalizado (`AbstractUser`).
-- Lógica de Roles (Admin, Psicólogo, Administrativo, Paciente, Empresa).
-- Autenticación JWT.
+- Gestión de identidad, roles y soporte para **Firmas Digitales** de especialistas.
 
 ### 🏥 `clinics/`
-El corazón del SaaS multi-tenant.
-- **Clínicas**: Entidad raíz que separa los datos.
-- **Sedes (HQs)**: Ubicaciones físicas de cada clínica.
-- **Servicios**: Catálogo de consultas, evaluaciones y talleres.
-- **Planes de Suscripción**: Control de acceso para las clínicas cliente.
+- El corazón del SaaS. Gestión de clínicas, sedes, servicios y planes de suscripción.
 
 ### 👥 `patients/`
-Gestión de usuarios finales de salud.
-- Datos personales y demográficos.
-- Registro de dependientes/menores de edad.
-- Vínculos de parentesco y tutores legales.
-- Gestión de consentimientos informados.
+- Gestión de pacientes y **Vínculos Familiares** (dependientes/tutores).
 
 ### 📅 `appointments/`
-Motor de agendamiento inteligente.
-- Citas individuales y grupales.
-- Gestión de disponibilidad física y virtual.
-- Bloqueos de agenda (vacaciones, licencias, feriados).
-- Estados de cita (Pendiente, Confirmada, Cancelada, Pagada).
+- Motor de agendamiento inteligente con **Soft Locks**, auditoría de cambios y disponibilidad compleja.
 
 ### 📑 `clinical_records/`
-Historia Clínica Electrónica (EMR).
-- Evoluciones y notas de sesión.
-- Seguimiento de objetivos terapéuticos.
-- Materiales asignados y compromisos.
-- Registro inmutable de cambios.
+- Historia Clínica Electrónica (EMR) con validación por esquemas JSON, buscador **CIE-10/11** y alertas de alergias.
 
 ### 📝 `psychological_tests/`
-Motor de evaluaciones psicométricas.
-- Definición de tests, dimensiones y preguntas.
-- Almacenamiento de respuestas y cálculo de resultados.
-- Baremos y escalas de calificación automática.
+- Motor de evaluaciones psicométricas, dimensiones y calificación basada en baremos.
 
 ### 🏢 `companies/`
-Portal B2B (Bambu B2B).
-- Gestión de empresas cliente.
-- Nómina de empleados y validación de afiliación para descuentos.
-- Planes corporativos específicos.
+- Portal B2B, gestión de convenios corporativos y captura de nómina.
+
+### 🛡️ `insurances/`
+- Gestión de compañías de seguros y cálculo automático de copagos y coaseguros.
+
+### 🏭 `occupational_health/`
+- Flujo de Salud Ocupacional: Hojas de ruta por protocolo y dictámenes de aptitud.
 
 ### 💰 `discounts/`
-Lógica de beneficios y promociones.
-- Motor de descuentos (Convenios, Familiar, Cliente Antiguo).
-- Regla de aplicación del beneficio mayor.
+- Motor unificado de beneficios y promociones.
 
 ---
 
@@ -68,4 +43,4 @@ Lógica de beneficios y promociones.
 - `docs/`: Documentación técnica y reglas de negocio.
 - `manage.py`: Script de gestión de Django.
 - `requirements.txt`: Dependencias del servidor.
-- `.env`: Variables de entorno (DB, Keys, etc.).
+- `.env`: Variables de entorno configurables.

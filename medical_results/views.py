@@ -1,18 +1,25 @@
-from rest_framework import viewsets, permissions
+#medical_results/views.py
+from core.viewsets import BaseViewSet
+from core.mixins import ClinicalAuditReadMixin
+from rest_framework import permissions
 from .models import MedicalResult
 from .serializers import MedicalResultSerializer
 
-class MedicalResultViewSet(viewsets.ModelViewSet):
+class MedicalResultViewSet(ClinicalAuditReadMixin, BaseViewSet):
     """
     Gestión de Resultados Médicos (Laboratorio e Imágenes).
     """
     serializer_class = MedicalResultSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_audit_patient_id(self, instance):
+        return instance.patient.id if instance.patient else None
+    serializer_class = MedicalResultSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
     def get_queryset(self):
         user = self.request.user
-        clinic = getattr(user, 'clinic', None)
-        base_qs = MedicalResult.objects.filter(clinic=clinic)
+        base_qs = super().get_queryset()
 
         if user.role == 'PATIENT':
             return base_qs.filter(patient__user=user).exclude(appointment__service__is_confidential_to_patient=True)
@@ -22,7 +29,3 @@ class MedicalResultViewSet(viewsets.ModelViewSet):
             return base_qs.filter(appointment__company=user.managed_company)
         
         return base_qs
-
-    def perform_create(self, serializer):
-        clinic = getattr(self.request.user, 'clinic', None)
-        serializer.save(clinic=clinic)

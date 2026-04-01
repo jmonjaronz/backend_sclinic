@@ -1,5 +1,7 @@
+#users/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.exceptions import ValidationError
 from core.models import Clinic
 import uuid
 
@@ -43,6 +45,21 @@ class User(AbstractUser):
             return True
         return False
 
+    def has_permission(self, permission_codename):
+        """
+        Verifica si el rol activo del usuario cuenta con el Capability específico.
+        Formato esperado: <modulo>.<recurso>.<accion> (ej: patient.record.read)
+        """
+        # SuperAdmins tienen acceso total por defecto
+        if self.role == self.Role.SUPERADMIN:
+            return True
+        
+        # Debe tener un rol activo seleccionado
+        if getattr(self, 'active_role', None) and self.active_role.is_active:
+            return self.active_role.capabilities.filter(codename=permission_codename).exists()
+            
+        return False
+
 
 # ---------------------------------------------------------------------------
 # 2. Sistema de Roles Dinámicos (requerimiento 2_Usuarios_Permisos.md)
@@ -62,6 +79,20 @@ class Capability(models.Model):
         return self.codename
 
 
+class RoleTemplate(models.Model):
+    """
+    Plantillas base globales del sistema (ej: ROLE_TEMPLATE_DOCTOR).
+    Las clínicas clonan estas plantillas para crear sus propios DynamicRoles.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True, help_text="Ej: ROLE_TEMPLATE_DOCTOR")
+    description = models.TextField(blank=True)
+    capabilities = models.ManyToManyField(Capability, blank=True, related_name='templates')
+    
+    def __str__(self):
+        return self.name
+
+
 class DynamicRole(models.Model):
     """
     Clinic-specific role defined in the database.
@@ -75,6 +106,11 @@ class DynamicRole(models.Model):
 
     class Meta:
         unique_together = ('clinic', 'name')
+
+    def clean(self):
+        """Req: 2_Usuarios_Permisos.md sec 2.3 - Un rol debe tener al menos un permiso."""
+        if self.pk and not self.capabilities.exists():
+            raise ValidationError("El rol debe tener al menos un permiso asignado.")
 
     def __str__(self):
         return f"{self.name} ({self.clinic.name})"
@@ -109,8 +145,11 @@ class ClinicalAuditLog(models.Model):
         VIEW_NOTE = 'VIEW_NOTE', 'Ver Nota de Sesión'
         VIEW_RESULT = 'VIEW_RESULT', 'Ver Resultado Clínico'
         DOWNLOAD_DOC = 'DOWNLOAD_DOC', 'Descargar Documento'
-        EDIT_RECORD = 'EDIT_RECORD', 'Editar Registro'
+        EDIT_RECORD = 'EDIT_RECORD', 'Editar Registro' # Legacy, keeping for backwards compatibility
         SIGN_RECORD = 'SIGN_RECORD', 'Firmar Registro'
+        CREATE_RECORD = 'CREATE_RECORD', 'Crear Registro'
+        UPDATE_RECORD = 'UPDATE_RECORD', 'Actualizar Registro'
+        DELETE_RECORD = 'DELETE_RECORD', 'Eliminar Registro'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
@@ -120,6 +159,10 @@ class ClinicalAuditLog(models.Model):
     resource_type = models.CharField(max_length=100, help_text="Ej: ClinicalRecord, SessionNote, MedicalResult")
     resource_id = models.CharField(max_length=100, help_text="UUID o ID del recurso accedido")
     patient_id = models.IntegerField(null=True, blank=True)
+    
+    before_state = models.JSONField(null=True, blank=True, help_text="Estado de los datos antes del cambio")
+    after_state = models.JSONField(null=True, blank=True, help_text="Estado de los datos después del cambio")
+    
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
 

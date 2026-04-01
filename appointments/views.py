@@ -1,3 +1,4 @@
+#appointments/views.py
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -5,8 +6,10 @@ from django.utils import timezone
 import datetime
 from .models import Appointment, AvailabilityBlock, TreatmentPlan, AppointmentHistory, AppointmentSoftLock
 from .serializers import AppointmentSerializer, AvailabilityBlockSerializer, TreatmentPlanSerializer, AppointmentHistorySerializer
+from clinics.services import UsageService
+from core.viewsets import BaseViewSet
 
-class AppointmentViewSet(viewsets.ModelViewSet):
+class AppointmentViewSet(BaseViewSet):
     """
     Gestión de citas.
     - Especialistas y Admins ven todas las de su clínica o las suyas propias.
@@ -17,7 +20,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        base_qs = Appointment.objects.all()
+        base_qs = super().get_queryset()
 
         if hasattr(user, 'clinic') and user.clinic:
             base_qs = base_qs.filter(clinic=user.clinic)
@@ -36,6 +39,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         clinic = serializer.validated_data.get('clinic', getattr(user, 'clinic', None))
         
+        if not clinic:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No se pudo determinar la clínica para esta cita.")
+
+        # VALIDACIÓN DE CUOTA (appointments_monthly)
+        UsageService.check_and_increment(clinic, 'appointments_monthly')
+
         extra_data = {'clinic': clinic}
         
         if user.role == 'COMPANY' and hasattr(user, 'managed_company'):
@@ -349,15 +359,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class TreatmentPlanViewSet(viewsets.ModelViewSet):
+class TreatmentPlanViewSet(BaseViewSet):
     serializer_class = TreatmentPlanSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        base_qs = TreatmentPlan.objects.all()
-        if hasattr(user, 'clinic') and user.clinic:
-            base_qs = base_qs.filter(clinic=user.clinic)
+        base_qs = super().get_queryset()
         return base_qs
 
     def perform_create(self, serializer):
@@ -414,7 +422,7 @@ class TreatmentPlanViewSet(viewsets.ModelViewSet):
             'sessions_updated': count
         }, status=status.HTTP_200_OK)
 
-class AvailabilityBlockViewSet(viewsets.ModelViewSet):
+class AvailabilityBlockViewSet(BaseViewSet):
     queryset = AvailabilityBlock.objects.all()
     serializer_class = AvailabilityBlockSerializer
     permission_classes = [permissions.IsAuthenticated]

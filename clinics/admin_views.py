@@ -1,3 +1,4 @@
+#clinics/admin_views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Count, Sum
@@ -15,7 +16,7 @@ class SuperAdminDashboardView(APIView):
 
     def get(self, request):
         total_clinics = Clinic.objects.count()
-        active_clinics = Clinic.objects.filter(is_active=True).count()
+        active_clinics = Clinic.objects.filter(status=Clinic.Status.ACTIVE).count()
         
         total_appointments = Appointment.objects.count()
         confirmed_appointments = Appointment.objects.filter(status='CONFIRMED').count()
@@ -35,7 +36,7 @@ class SuperAdminDashboardView(APIView):
         clinics_data = Clinic.objects.annotate(
             appointment_count=Count('appointments'),
             user_count=Count('users')
-        ).values('id', 'name', 'appointment_count', 'user_count', 'is_active')
+        ).values('id', 'name', 'appointment_count', 'user_count', 'status')
 
         return Response({
             "summary": {

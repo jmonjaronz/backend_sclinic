@@ -1,3 +1,4 @@
+#medical_results/apps.py
 from django.apps import AppConfig
 
 class MedicalResultsConfig(AppConfig):
