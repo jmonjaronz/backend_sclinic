@@ -104,6 +104,15 @@ Este módulo gestiona la definición y configuración de los servicios médicos 
         - firmado digitalmente
         - aceptado durante el proceso de agendamiento
         - registrado manualmente por el personal administrativo.
+### 5.1. Identificador Único del Servicio (Multi-tenant seguro)
+- Cada servicio debe tener un identificador único dentro de la clínica.
+- Este identificador:
+    - es generado automáticamente por el sistema
+    - no depende del nombre del servicio
+    - no cambia durante su ciclo de vida
+- Permite:
+    - evitar conflictos por nombres similares
+    - integraciones futuras (reportes, APIs, B2B)
 
 ## 6. Requerimientos de Recursos
 - **Descripción**
