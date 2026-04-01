@@ -1,3 +1,4 @@
+#core/utils/tenant_utils.py
 from clinics.models import ClinicModuleSubscription
 
 def has_feature(clinic, feature_code):

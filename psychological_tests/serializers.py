@@ -1,3 +1,4 @@
+#psychological_tests/serializers.py
 from rest_framework import serializers
 from .models import (
     TestBattery, PsychologicalTest, Dimension, Question, ScaleOption, 

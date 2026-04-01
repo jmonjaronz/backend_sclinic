@@ -1,3 +1,4 @@
+#verify_viewset_inheritance.py
 import os
 import re
 

@@ -1,3 +1,4 @@
+#psychological_tests/logic.py
 from .models import TestApplication, Baremo, DimensionResult
 from django.db import models
 from django.utils import timezone

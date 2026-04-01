@@ -1,3 +1,4 @@
+#core/services/quota_service.py
 """
 QuotaService – Validación transaccional de cuotas mensuales.
 Req: 1_Infraestructura.md sec. 4.9 – Sistema de Contenedor de Quotas.

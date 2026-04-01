@@ -1,3 +1,4 @@
+#verify_celery_infra.py
 import os
 import django
 

@@ -1,3 +1,4 @@
+#clinical_records/services.py
 class AutocompleteService:
     """
     Servicio para autocompletar texto en historias clínicas mediante atajos (ej. /normal)

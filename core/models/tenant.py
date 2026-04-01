@@ -1,3 +1,4 @@
+#core/models/tenant.py
 import uuid
 from django.db import models
 

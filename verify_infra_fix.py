@@ -1,3 +1,4 @@
+#verify_infra_fix.py
 import os
 import django
 

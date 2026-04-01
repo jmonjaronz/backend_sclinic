@@ -1,8 +1,9 @@
+#core/viewsets.py
 from rest_framework import viewsets, permissions
-from .mixins import ClinicIsolationMixin
+from .mixins import ClinicIsolationMixin, ClinicalAuditWriteMixin
 from .permissions import HasCapabilityPermission, PortalAccessPermission
 
-class BaseViewSet(ClinicIsolationMixin, viewsets.ModelViewSet):
+class BaseViewSet(ClinicIsolationMixin, ClinicalAuditWriteMixin, viewsets.ModelViewSet):
     """
     ViewSet Base obligatorio para todos los endpoints de la API.
     Centraliza:

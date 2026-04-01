@@ -1,3 +1,4 @@
+#clinics/views.py
 from rest_framework import viewsets, permissions
 from core.models import Clinic
 from .models import (

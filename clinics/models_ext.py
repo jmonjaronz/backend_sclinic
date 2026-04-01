@@ -1,3 +1,4 @@
+#clinics/models_ext.py
 from django.db import models
 import uuid
 from core.models import Clinic

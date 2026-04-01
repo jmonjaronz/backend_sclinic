@@ -1,3 +1,4 @@
+#core/permissions.py
 from rest_framework import permissions
 from users.models import User
 from core.utils.tenant_utils import has_feature

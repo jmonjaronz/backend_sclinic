@@ -1,3 +1,4 @@
+#clinics/serializers.py
 from rest_framework import serializers
 from .models import (
     Headquarters, Specialty, Service, Specialist, SubscriptionPlan, 

@@ -1,3 +1,4 @@
+#patients/views.py
 from rest_framework import status, permissions
 from core.viewsets import BaseViewSet
 from rest_framework.response import Response

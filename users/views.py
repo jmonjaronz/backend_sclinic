@@ -1,3 +1,4 @@
+#users/views.py
 """
 Views para gestión RBAC dinámica del sistema SCLINIC.
 Req: 2_Usuarios_Permisos.md – Roles Dinámicos, Capabilities y UserRole.

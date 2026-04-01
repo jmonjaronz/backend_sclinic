@@ -1,3 +1,4 @@
+#occupational_health/views.py
 from core.viewsets import BaseViewSet
 from .models import OccupationalEvaluation, EvaluationServiceStatus, AptitudeDictum
 from .serializers import OccupationalEvaluationSerializer, EvaluationServiceStatusSerializer, AptitudeDictumSerializer

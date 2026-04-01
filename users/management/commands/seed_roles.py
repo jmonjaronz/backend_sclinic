@@ -1,3 +1,4 @@
+#users/management/commands/seed_roles.py
 """
 Management command: seed_roles
 Carga en base de datos los Capabilities and RoleTemplates base del sistema.

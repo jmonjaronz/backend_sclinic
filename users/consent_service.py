@@ -1,3 +1,4 @@
+#users/consent_service.py
 """
 ConsentService – Validación de consentimientos del paciente.
 Req: 2_Usuarios_Permisos.md sec. 2.6 y 4.6 – ConsentManagement Activo.

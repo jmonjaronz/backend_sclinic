@@ -46,8 +46,19 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - advertir al usuario administrativo
         - permitir revisar registros existentes antes de crear uno nuevo.
     - Esto ayuda a mantener la integridad de la información clínica.
+- **El sistema debe soportar detección avanzada de duplicados:**
+    - Estrategias:
+        - coincidencia exacta (DNI)
+        - coincidencia difusa (nombre + fecha nacimiento)
+        - coincidencia por teléfono/email
+    - El sistema debe permitir:
+        - marcar registros como duplicados
+        - fusionar pacientes (merge)
+    - El proceso de merge debe:
+        - mantener historial clínico
+        - registrar auditoría completa
 
-## 3. Separación entre Paciente y Usuario del Sistema
+## 4. Separación entre Paciente y Usuario del Sistema
 - **Descripción:**
     - El sistema debe diferenciar claramente entre:
         - Paciente
@@ -62,8 +73,21 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
         - El personal de la clínica no puede crear usuarios del sistema para los pacientes.
     - La creación de cuentas de usuario siempre debe ser realizada voluntariamente por el propio paciente.
     - Un paciente puede existir indefinidamente sin tener una cuenta digital.
+- **Vinculación opcional con usuario del sistema**
+    - Aunque un paciente puede existir sin cuenta digital, el sistema debe permitir vincularlo posteriormente a una identidad (User).
+    - Esta vinculación es necesaria para:
+        - acceso al portal paciente
+        - gestión de dependientes
+        - firma de consentimientos digitales
+    - Reglas:
+        - La vinculación debe ser iniciada por el propio usuario (self-service)
+        - Debe existir un proceso de validación de identidad (ej: código SMS, validación documental)
+    - Un usuario puede estar vinculado a:
+        - su propio registro como paciente
+        - múltiples pacientes dependientes
+    - Esta relación no es obligatoria para la existencia del paciente
 
-## 4. Gestión de Pacientes Dependientes
+## 5. Gestión de Pacientes Dependientes
 - **Descripción:**
     - El sistema debe soportar pacientes que dependen de un responsable legal para la gestión de su atención médica.
     - Esto incluye:
@@ -87,8 +111,17 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
             - madre
             - tutor legal
             - representante autorizado.
+    - Integración con portal paciente
+        - Si el responsable posee una cuenta de usuario:
+            - podrá gestionar a los dependientes desde el portal paciente
+        - El sistema debe validar:
+            - relación de tutela (PatientRelationship)
+            - vínculo con el usuario autenticado
+        - Regla:
+            - Sin vínculo válido:
+                - no se permite acceso digital al dependiente
 
-## 5. Registro de Dependientes
+## 6. Registro de Dependientes
 - **Descripción:**
     - El sistema debe permitir registrar pacientes dependientes incluso si el responsable no está presente en ese momento.
     - Esto es necesario para situaciones como:
@@ -110,7 +143,7 @@ Este módulo gestiona la identidad clínica de las personas atendidas en el sist
     - Esto protege legalmente a la clínica hasta que se valide la representación legal.
 El estado "Tutor pendiente de validación" representa la situación de la relación de tutela y no afecta la existencia del paciente dentro del sistema.
 
-## 6. Validación de Tutela o Representación Legal
+## 7. Validación de Tutela o Representación Legal
 - **Descripción:**
     - Para formalizar la relación entre un responsable y un paciente dependiente, el sistema debe permitir registrar documentación de respaldo.
 - **Flujo de validación:**
@@ -121,7 +154,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
     - El documento se registra en el sistema.
     - Una vez validado el documento, el estado del paciente cambia a: Tutor validado
 
-## 7. Gestión de Pacientes con Discapacidad
+## 8. Gestión de Pacientes con Discapacidad
 - **Descripción:**
     - El sistema debe permitir que pacientes adultos con discapacidad puedan tener un responsable que gestione su atención médica.
 - **Funcionamiento:**
@@ -130,7 +163,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
         - el responsable puede gestionar citas y autorizaciones
     - la relación debe estar respaldada por documentación válida.
 
-## 8. Independencia del Paciente al Alcanzar la Mayoría de Edad
+## 9. Independencia del Paciente al Alcanzar la Mayoría de Edad
 - **Descripción:**
     - Cuando un paciente dependiente alcanza la mayoría de edad, el sistema debe permitir que este pueda gestionar su propia cuenta digital si lo desea.
 - **Flujo de independencia:**
@@ -140,7 +173,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
     - La creación de la cuenta no es obligatoria.
     - El paciente puede continuar siendo atendido sin tener acceso digital.
 
-## 9. Acceso del Responsable a la Información del Dependiente
+## 10. Acceso del Responsable a la Información del Dependiente
 - **Descripción:**
     - El responsable autorizado puede gestionar aspectos administrativos del paciente dependiente.
 - **Restricciones:**
@@ -150,21 +183,22 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
         - acceso a historia clínica
         - descarga de documentos.
 
-## 10. Estados del Paciente
+## 11. Estados del Paciente
 - **Descripción:**
     - El sistema debe permitir que cada paciente tenga un estado administrativo que represente su situación dentro de la clínica.
 - **Estados posibles:**
     - Activo
         - Paciente habilitado para recibir atención médica y utilizar los servicios de la clínica.
+    - Pendiente de Validación de Tutor
+        - Paciente dependiente sin documentación legal validada
     - Anonimizado
-        - Paciente dependiente registrado sin documentación legal validada que respalde la relación con su responsable.
-        - En este estado se permiten atenciones iniciales, pero se restringen ciertos procesos administrativos y accesos digitales.
+        - Paciente cuyo dato personal ha sido eliminado por cumplimiento legal (LPDP / derecho al olvido)
     - Inactivo
         - Paciente que ya no recibe atención activa en la clínica, pero cuyos registros deben mantenerse por razones médicas, legales o administrativas.
     - Bloqueado
         - Paciente cuyo registro se encuentra temporalmente restringido debido a situaciones administrativas o legales definidas por la clínica.
 
-## 11. Consentimiento Informado del Paciente
+## 12. Consentimiento Informado del Paciente
 - **Descripción:**
     - El sistema debe permitir registrar la aceptación de documentos de consentimiento informado por parte del paciente o su responsable legal.
     - Este proceso es necesario para cumplir con las normativas de protección de datos personales y regulaciones de atención médica.
@@ -183,7 +217,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
     - versión del documento aceptado
     - identidad del paciente o responsable que otorgó el consentimiento.
 
-## 12. Configuración de Datos Obligatorios del Paciente
+## 13. Configuración de Datos Obligatorios del Paciente
 - **Descripción:**
     - Cada clínica podrá definir qué información es obligatoria para completar el perfil del paciente dentro de su institución.
     - Esto permite adaptar el sistema a diferentes políticas administrativas y regulatorias.
@@ -200,7 +234,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
         - generación de documentos
         - acceso a determinados servicios administrativos.
 
-## 13. Registro de Pacientes mediante Convenios Empresariales (B2B)
+## 14. Registro de Pacientes mediante Convenios Empresariales (B2B)
 - **Descripción:**
     - El sistema debe permitir registrar pacientes provenientes de convenios empresariales o evaluaciones ocupacionales.
     - En estos escenarios, las empresas pueden proporcionar listas de trabajadores que deben ser evaluados por la clínica.
@@ -219,7 +253,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
         - estado de evaluación
         - aptitud ocupacional
         - resultados autorizados.   
-## 14. Red de Contactos de Emergencia (Contactos de Confianza)
+## 15. Red de Contactos de Emergencia (Contactos de Confianza)
 - **Descripción:**
     - El sistema debe permitir la gestión de personas de contacto para situaciones críticas.
 - **Lógica de Registro:**
@@ -232,7 +266,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
 - **Visualización Crítica:**
     - Este dato debe ser accesible mediante un "Acceso Rápido" en la ficha del paciente, permitiendo que el especialista lo vea sin necesidad de navegar profundamente en la historia clínica.
 
-## 15. Gestión de Vínculos Familiares
+## 16. Gestión de Vínculos Familiares
 - **Descripción:**
     - El sistema debe permitir registrar relaciones familiares entre pacientes registrados dentro de la clínica.
 - Este mecanismo permite representar relaciones familiares que no necesariamente implican tutela legal, pero que pueden ser relevantes para:
@@ -283,7 +317,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
         - el padre también puede usarlo
 - La clínica podrá definir la política de herencia según sus reglas administrativas.
 
-## 16. Política de Retención y Anonimización (Cumplimiento LPDP)
+## 17. Política de Retención y Anonimización (Cumplimiento LPDP)
 - **Descripción:**
     - Gestión del ciclo de vida de los datos personales frente a la obligatoriedad de la Historia Clínica (HC).
 - **Estado: Anonimizado (Derecho al Olvido):**
@@ -291,8 +325,16 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
     - El registro clínico permanece vinculado a un ID interno alfanumérico para fines de auditoría legal y estadística de la clínica.
 - **Plazo de Custodia:**
     - El sistema debe permitir configurar el tiempo de retención (ej. 15 años) tras el cual el registro anonimizado puede ser eliminado definitivamente de la base de datos de la clínica.
+- **Reglas de eliminación:**
+    - El sistema no debe eliminar pacientes físicamente (hard delete)
+    - Todas las eliminaciones deben ser:
+        - lógicas (soft delete)
+        - auditadas
+    - Excepción:
+        - eliminación definitiva solo después del periodo de retención
+        - pruebas de calidad
 
-## 17. Auditoría de Visualización (Read-Only Audit)
+## 18. Auditoría de Visualización (Read-Only Audit)
 - **Descripción:**
     - Registro obligatorio de cada "evento de lectura" de información sensible.
 - **Funcionamiento:**
@@ -302,7 +344,7 @@ El estado "Tutor pendiente de validación" representa la situación de la relaci
 - **Reporte de Intrusión:**
     - El sistema debe facilitar reportes de "Accesos Inusuales" (ej. un personal administrativo consultando muchas historias clínicas en poco tiempo).
 
-## 18. Control de Vigencia de Consentimientos (Versionado)
+## 19. Control de Vigencia de Consentimientos (Versionado)
 - **Descripción:**
     - Mecanismo para asegurar que el paciente siempre esté bajo el marco legal más reciente de la clínica.
 - **Lógica de Versionado:**

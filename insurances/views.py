@@ -1,3 +1,4 @@
+#insurances/views.py
 from core.viewsets import BaseViewSet
 from .models import Insurer, InsurancePlan, InsuranceCoverage
 from .serializers import InsurerSerializer, InsurancePlanSerializer, InsuranceCoverageSerializer

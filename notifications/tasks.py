@@ -1,3 +1,4 @@
+#notifications/tasks.py
 from celery import shared_task
 from core.utils.celery_utils import tenant_task
 import logging

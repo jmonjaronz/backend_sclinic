@@ -1,3 +1,4 @@
+#occupational_health/serializers.py
 from rest_framework import serializers
 from .models import OccupationalEvaluation, EvaluationServiceStatus, AptitudeDictum
 

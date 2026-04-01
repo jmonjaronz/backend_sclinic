@@ -1,3 +1,4 @@
+#users/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -144,8 +145,11 @@ class ClinicalAuditLog(models.Model):
         VIEW_NOTE = 'VIEW_NOTE', 'Ver Nota de Sesión'
         VIEW_RESULT = 'VIEW_RESULT', 'Ver Resultado Clínico'
         DOWNLOAD_DOC = 'DOWNLOAD_DOC', 'Descargar Documento'
-        EDIT_RECORD = 'EDIT_RECORD', 'Editar Registro'
+        EDIT_RECORD = 'EDIT_RECORD', 'Editar Registro' # Legacy, keeping for backwards compatibility
         SIGN_RECORD = 'SIGN_RECORD', 'Firmar Registro'
+        CREATE_RECORD = 'CREATE_RECORD', 'Crear Registro'
+        UPDATE_RECORD = 'UPDATE_RECORD', 'Actualizar Registro'
+        DELETE_RECORD = 'DELETE_RECORD', 'Eliminar Registro'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
@@ -155,6 +159,10 @@ class ClinicalAuditLog(models.Model):
     resource_type = models.CharField(max_length=100, help_text="Ej: ClinicalRecord, SessionNote, MedicalResult")
     resource_id = models.CharField(max_length=100, help_text="UUID o ID del recurso accedido")
     patient_id = models.IntegerField(null=True, blank=True)
+    
+    before_state = models.JSONField(null=True, blank=True, help_text="Estado de los datos antes del cambio")
+    after_state = models.JSONField(null=True, blank=True, help_text="Estado de los datos después del cambio")
+    
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
 

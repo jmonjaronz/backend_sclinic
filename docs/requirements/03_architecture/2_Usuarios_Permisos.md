@@ -32,7 +32,15 @@ Este módulo controla:
   - No se permite compartir usuarios entre clínicas
   - El aislamiento de identidad es parte del modelo de seguridad
 - **Identidad por contexto**
-  - Un mismo individuo puede tener múltiples cuentas independientes dentro del sistema. Cada cuenta representa un contexto distinto
+  - Un mismo individuo debe tener una única identidad (User) por clínica
+    - Esta identidad puede operar en múltiples contextos:
+    - paciente
+    - staff clínico
+    - portal empresarial (si aplica)
+  - El sistema debe diferenciar:
+    - identidad (User)
+    - perfil (PatientProfile, StaffProfile, CompanyProfile)
+    - contexto de sesión (portal + rol activo)
   - Ejemplo:
     - Contexto	                Usuario	                    Tipo
     - Paciente	                DNI: 12345678	            PATIENT
@@ -43,11 +51,30 @@ Este módulo controla:
   - Si se necesita relación:
     - Debe ser explícita
     - Debe estar controlada (ej: tabla PersonLink opcional)
+- **Contexto de sesión del usuario**
+  - Aunque un usuario pertenece a una única clínica, el sistema debe permitir que opere en distintos contextos funcionales dentro de esa clínica.
+  - Definición de contexto
+    - Un contexto de sesión está compuesto por:
+      - tipo de portal:
+        - intranet clínica
+        - portal paciente
+        - portal empresarial (B2B)
+      - rol activo (si aplica)
+    - Reglas:
+      - Un usuario puede tener acceso a múltiples portales dentro de la misma clínica.
+      - El acceso a cada portal debe estar explícitamente habilitado.
+      - El usuario solo puede operar bajo un contexto activo a la vez.
+      - El contexto debe definirse al momento de autenticación o inmediatamente después.
+    - Para acceder al portal paciente, el usuario debe estar vinculado explícitamente a un registro de paciente dentro de la clínica.
+    - Esta vinculación debe ser validada mediante mecanismos de verificación (ej: identidad, contacto o validación administrativa).
 ### 2.2 Roles dinámicos
   - Roles definidos en base de datos
   - Un usuario puede tener múltiples roles
-  - El sistema debe permitir seleccionar:
-    - rol activo al autenticarse
+  - El sistema debe permitir definir un rol activo dentro del contexto de sesión.
+  - Un usuario puede tener múltiples roles asignados.
+  - El rol activo determina los permisos efectivos durante la sesión.
+  - El cambio de rol activo puede permitirse durante la sesión según políticas de seguridad.
+
 ### 2.3 Gobernanza de Roles
   - Si cada clínica crea roles sin control → caos organizacional
   - **Plantillas base del sistema**
@@ -111,14 +138,58 @@ Este módulo controla:
     - Paciente	Pacientes	Solo su data
     - B2B	Empresas	Data restringida
   - Regla técnica
-    - Cada request debe validar:
-      - view.portal_type
+    - Cada request debe validar obligatoriamente:
+      - clinic_id
+      - portal_type
+      - rol activo (si aplica)
+      - permisos asociados
+  - Reglas de acceso por portal:
+    - Portal Intranet:
+      - Requiere autenticación como usuario de tipo STAFF
+      - Permisos controlados por roles
+    - Portal Paciente:
+      - Solo permite acceso a datos del paciente vinculado al usuario
+      - No requiere roles administrativos
+    - Portal B2B:
+      - Acceso restringido a información autorizada por convenios
+      - No permite acceso a historia clínica completa
+- El acceso al portal paciente requiere:
+  - vinculación explícita entre User y PatientProfile
+- El acceso a dependientes requiere:
+  - relación válida en PatientRelationship
+- El backend debe validar:
+  - identidad
+  - vínculo
+  - contexto
 ### 2.6 Consentimiento del paciente
   - No se puede:
     - crear historia clínica
     - ejecutar evaluaciones
     - mostrar datos médicos
   - si no existe consentimiento válido
+### 2.7 Tipos de Usuario y Contexto de Uso
+- El sistema NO define múltiples tipos de usuario a nivel de identidad.
+- Existe una única entidad User.
+- Los comportamientos se definen por:
+  - perfiles asociados
+  - roles
+  - contexto de sesión
+- Contextos soportados:
+  - intranet (staff clínico)
+  - patient_portal
+  - b2b_portal
+- Reglas:
+  - Un usuario puede operar en múltiples contextos
+  - El contexto activo define:
+    - permisos
+    - alcance de datos
+- Ejemplo:
+  - Usuario con:
+    - StaffProfile (doctor)
+    - PatientProfile
+  - Puede:
+    - acceder como doctor → ver pacientes
+    - acceder como paciente → ver su historia
 
 ## 3. Modelo de Datos (Conceptual)
 ### 3.1 Entidades principales
@@ -153,6 +224,10 @@ Este módulo controla:
     - granted (bool)
     - granted_at
     - expires_at
+- Un usuario puede estar vinculado a:
+  - su propio perfil de paciente
+  - múltiples dependientes (hijos)
+- Esta relación es obligatoria para acceso al portal paciente
 
 ## 4. Consideraciones Técnicas
 ### 4.1 IdentityCore
@@ -161,11 +236,13 @@ Este módulo controla:
     - El usuario representa únicamente la cuenta de acceso al sistema, no el perfil clínico o administrativo.
     - Esto permite separar la identidad de los distintos perfiles que pueden existir dentro del sistema.
   - **Separación entre Identidad y Perfil**
-    - El sistema debe permitir que un mismo usuario pueda estar asociado a distintos perfiles según el contexto del sistema (Solo Portal B2B y Portal Intranet).
-    - Por ejemplo:
-        - perfil de especialista
-        - perfil administrativo
-        - perfil empresarial
+    - El sistema debe permitir que un mismo usuario opere en distintos contextos funcionales dentro de su clínica, definidos por:
+      - portal de acceso
+      - rol activo (si aplica)
+    - Un usuario puede:
+      - acceder como personal clínico (intranet)
+      - acceder como paciente (portal paciente), si existe vinculación con un paciente
+    - Estos contextos deben estar aislados a nivel de permisos y datos
     - Esta separación permite mantener el sistema desacoplado y flexible a largo plazo.
   - **Asociación con Clínica**
     - Todos los usuarios del sistema estarán asociados a una clínica específica dentro de la arquitectura multi-tenant.
@@ -252,7 +329,12 @@ Este módulo controla:
 - **Descripción**
     - El sistema tendrá distintos portales de acceso diseñados para diferentes tipos de usuarios.
     - Cada portal tendrá restricciones específicas sobre la información que puede visualizar o gestionar.
-
+- **Contexto de sesión obligatorio**
+    - Todo acceso a un portal debe establecer un contexto de sesión válido que incluya:
+        - usuario autenticado
+        - clínica
+        - portal
+        - rol activo (si aplica)
 - **Tipos de Portales**
     - El sistema deberá soportar al menos los siguientes contextos de acceso:
         - **Portal Intranet**

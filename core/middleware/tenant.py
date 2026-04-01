@@ -1,3 +1,4 @@
+#core/middleware/tenant.py
 from django.utils.deprecation import MiddlewareMixin
 from django.core.cache import cache
 from django.http import HttpResponseForbidden

@@ -23,6 +23,12 @@ Su propósito es garantizar:
   - Ninguna operación puede ejecutarse sin contexto de clínica
   - Si no se puede determinar la clínica:
     - el sistema debe fallar de forma segura (no devolver datos)
+  - El aislamiento no solo aplica por clínica, sino también por contexto y rol
+  - Ejemplo:
+    - Un paciente:
+      - solo puede acceder a SU información
+    - Un médico:
+      - puede acceder a pacientes de la clínica
 ### 2.2 Acceso a funcionalidades (Features)
   - Cada clínica tiene un conjunto de módulos habilitados
   - El acceso a funcionalidades:
@@ -51,7 +57,29 @@ Ejemplo:
   - Regla:
     - Si la clínica no está activa:
       - el sistema debe bloquear el acceso completamente
-      
+### 2.5 Contexto de Aplicación
+  - El sistema debe identificar desde qué tipo de aplicación se realiza la solicitud:
+    - intranet (staff clínico)
+    - patient_portal (pacientes)
+    - b2b_portal (empresas)
+    - public_web (sitio público)
+  - Este contexto debe viajar en cada request:
+    - header: X-App-Context
+    - o derivarse del dominio
+  - Reglas:
+    - El acceso a endpoints debe validarse también por contexto
+    - Un mismo usuario puede operar en distintos contextos
+    - El backend debe validar permisos considerando:
+      - clínica
+      - usuario
+      - rol
+    - contexto
+  - Ejemplo:
+    - Un médico (staff) puede acceder a:
+      - historia clínica (intranet)
+    - Pero como paciente:
+      - solo puede ver SU información (patient_portal)
+
 ## 3. Modelo de Datos (Conceptual)
 `Entidades principales`
   - Clinic
@@ -77,6 +105,30 @@ Ejemplo:
     - metric (ej: appointments_monthly)
     - value
     - period (ej: 2026-03)
+  - User (global)
+    - id
+    - email
+    - password
+    - is_active
+  - UserClinicRole
+    - user_id
+    - clinic_id
+    - role (admin, doctor, nurse, staff)
+  - PatientProfile
+    - id
+    - user_id
+    - clinic_id
+    - datos clínicos
+  - StaffProfile
+    - id
+    - user_id
+    - clinic_id
+    - tipo_profesional (doctor, psicólogo, etc.)
+  - PatientRelationship
+    - id
+    - owner_patient_id (padre/tutor)
+    - dependent_patient_id (hijo/menor)
+    - relationship_type (padre, madre, tutor legal)
 
 ## 4. Consideraciones Técnicas
 ### 4.1 Estrategia Multi-Tenancy
@@ -266,6 +318,12 @@ Regla:
         - Nivel de ViewSet (API)
         - Nivel de servicio (lógica de negocio)
         - NO solo en frontend
+    - Las features pueden depender también del contexto
+    - Ejemplo:
+        - telemedicina:
+            - habilitado en intranet
+            - habilitado en patient_portal
+            - NO visible en web pública
 - **Flags Iniciales del Sistema:**
     - Se recomienda implementar decoradores:
         - @feature_required("module_laboratory")
@@ -349,6 +407,28 @@ Regla:
     - La auditoría debe implementarse de forma transversal (middleware, signals o capa de servicio)
     - No debe depender de lógica manual en cada endpoint
     - Debe ser inmutable (no editable)
+    - Se debe registrar también:
+      - app_context (desde qué frontend)
+      - tipo de acceso:
+        - staff_access
+        - patient_access
+      - Ejemplo:
+        - acceso a historia clínica:
+          - contexto: intranet
+          - usuario: doctor
+        - acceso a resultados:
+          - contexto: patient_portal
+          - usuario: paciente
+### 4.11 Autenticación y Sesión
+- El sistema debe tener un sistema de autenticación centralizado
+- Un usuario puede iniciar sesión una sola vez y operar en múltiples contextos
+- Se recomienda:
+  - JWT con claims:
+    - user_id
+    - clinic_id
+    - roles
+    - app_context
+- El backend NO debe confiar en el frontend para roles
 
 ## 5. Arquitectura de Plataforma
 ### 5.1 Separación de Sistemas

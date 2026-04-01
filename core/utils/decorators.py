@@ -1,3 +1,4 @@
+#core/utils/decorators.py
 from functools import wraps
 from rest_framework.exceptions import PermissionDenied
 from core.models.tenant import get_current_clinic

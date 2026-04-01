@@ -1,3 +1,4 @@
+#clinical_records/serializers.py
 from rest_framework import serializers
 from .models import (
     ClinicalRecord, SessionNote, EmergencyAdmission, Hospitalization, Treatment, 

@@ -1,3 +1,4 @@
+#medical_results/views.py
 from core.viewsets import BaseViewSet
 from core.mixins import ClinicalAuditReadMixin
 from rest_framework import permissions

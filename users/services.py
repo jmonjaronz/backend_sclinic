@@ -1,8 +1,9 @@
+#users/services.py
 from .models import ClinicalAuditLog
 
 class ClinicalAuditService:
     @staticmethod
-    def log_action(request, action, resource_type, resource_id, patient_id=None):
+    def log_action(request, action, resource_type, resource_id, patient_id=None, before_state=None, after_state=None):
         """
         Registra una acción crítica (ej. VIEW_RECORD) en el log de auditoría clínica.
         """
@@ -21,5 +22,7 @@ class ClinicalAuditService:
             resource_type=resource_type,
             resource_id=str(resource_id),
             patient_id=patient_id,
+            before_state=before_state,
+            after_state=after_state,
             ip_address=ip_address
         )
