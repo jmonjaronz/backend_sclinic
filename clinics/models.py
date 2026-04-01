@@ -35,24 +35,44 @@ class Service(ClinicAwareModel):
     Req: 5_CatalogoServicios.md
     """
     class ServiceType(models.TextChoices):
-        B2B = 'B2B', 'Corporativo B2B'
-        WELLNESS = 'WELLNESS', 'Bienestar'
-        OCCUPATIONAL = 'OCCUPATIONAL', 'Salud Ocupacional'
-        EMERGENCY = 'EMERGENCY', 'Emergencias'
-        HOSPITALIZATION = 'HOSPITALIZATION', 'Hospitalización'
-        GENERAL = 'GENERAL', 'Consulta General'
+        CLINICAL = 'CLINICAL', 'Clínico'
+        DIAGNOSIS = 'DIAGNOSIS', 'Diagnóstico'
+        ADMINISTRATIVE = 'ADMINISTRATIVE', 'Administrativo'
+        OCCUPATIONAL = 'OCCUPATIONAL', 'Ocupacional'
+
+    class Modality(models.TextChoices):
+        PRESENTIAL = 'PRESENTIAL', 'Presencial'
+        VIRTUAL = 'VIRTUAL', 'Virtual'
+        HYBRID = 'HYBRID', 'Híbrido'
+
+    class GenderRule(models.TextChoices):
+        ALL = 'ALL', 'Todos'
+        MALE = 'MALE', 'Masculino'
+        FEMALE = 'FEMALE', 'Femenino'
+
+    class PatientTypeRule(models.TextChoices):
+        ALL = 'ALL', 'Todos'
+        NEW = 'NEW', 'Paciente Nuevo'
+        RECURRENT = 'RECURRENT', 'Paciente Recurrente'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     specialty = models.ForeignKey(Specialty, on_delete=models.CASCADE, related_name='services')
     name = models.CharField(max_length=255)
     internal_name = models.CharField(max_length=255, blank=True)
-    service_type = models.CharField(max_length=20, choices=ServiceType.choices, default=ServiceType.GENERAL)
+    service_type = models.CharField(max_length=20, choices=ServiceType.choices, default=ServiceType.CLINICAL)
+    modality = models.CharField(max_length=20, choices=Modality.choices, default=Modality.PRESENTIAL)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     # Duración y capacidad (5_CatalogoServicios.md)
     duration_minutes = models.PositiveIntegerField(default=30, help_text="Duración base de la consulta en minutos.")
     buffer_minutes = models.PositiveIntegerField(default=5, help_text="Minutos de buffer entre citas.")
     max_patients = models.PositiveIntegerField(default=1, help_text="Capacidad máxima de pacientes por cita (1=individual, >1=grupal).")
+
+    # Reglas de Elegibilidad del Paciente (Req: 5.5)
+    min_age_months = models.PositiveIntegerField(null=True, blank=True, help_text="Edad mínima en meses.")
+    max_age_months = models.PositiveIntegerField(null=True, blank=True, help_text="Edad máxima en meses.")
+    allowed_gender = models.CharField(max_length=10, choices=GenderRule.choices, default=GenderRule.ALL)
+    patient_type_required = models.CharField(max_length=20, choices=PatientTypeRule.choices, default=PatientTypeRule.ALL)
 
     # Instrucciones y requerimientos
     preparation_instructions = models.TextField(blank=True, help_text="Instrucciones previas para el paciente (ej: asistir en ayunas).")
@@ -66,6 +86,26 @@ class Service(ClinicAwareModel):
 
     def __str__(self):
         return f"{self.name} - {self.clinic.name}"
+
+
+class ServicePackage(ClinicAwareModel):
+    """
+    Agrupación de servicios en paquetes.
+    Req: 5_CatalogoServicios.md sec. 5.6
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    services = models.ManyToManyField(Service, related_name='packages')
+    
+    price_override = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Precio cerrado del paquete (opcional, si no se usa suma de servicios)."
+    )
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Paquete: {self.name} - {self.clinic.name}"
 
 
 class Specialist(ClinicAwareModel):

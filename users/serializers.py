@@ -1,6 +1,7 @@
 #users/serializers.py
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User, Capability, RoleTemplate, DynamicRole, UserRole
 
 
@@ -18,6 +19,42 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
+
+
+# ─────────────────── Auth / JWT Overrides ─────────────────────────────────────
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Sobrescribe el serializador por defecto de SimpleJWT para incluir claims
+    específicos del sistema multi-tenant y multi-contexto.
+    """
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Inyectar claims fijos de BD
+        token['clinic_id'] = str(user.clinic.id) if user.clinic else None
+        token['roles'] = user.role
+        token['active_role_id'] = str(user.active_role.id) if user.active_role else None
+        return token
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        # El context y request están disponibles en self.context cuando se usa la vista correcta.
+        request = self.context.get('request')
+        
+        import jwt
+        # Necesitamos volver a firmar el token con el X-App-Context si existe
+        app_context = getattr(request, 'app_context', None)
+        if app_context:
+            refresh = self.get_token(self.user)
+            refresh['app_context'] = app_context
+            
+            data['refresh'] = str(refresh)
+            data['access'] = str(refresh.access_token)
+            
+        return data
 
 
 # ─────────────────── Capability ───────────────────────────────────────────────

@@ -104,6 +104,77 @@ Este módulo gestiona la definición y configuración de los servicios médicos 
         - firmado digitalmente
         - aceptado durante el proceso de agendamiento
         - registrado manualmente por el personal administrativo.
+### 5.1. Identificador Único del Servicio (Multi-tenant seguro)
+- Cada servicio debe tener un identificador único dentro de la clínica.
+- Este identificador:
+    - es generado automáticamente por el sistema
+    - no depende del nombre del servicio
+    - no cambia durante su ciclo de vida
+- Permite:
+    - evitar conflictos por nombres similares
+    - integraciones futuras (reportes, APIs, B2B)
+### 5.2. Configuración de precio
+- El sistema debe permitir definir un precio base para cada servicio.
+- Este precio puede ser utilizado como referencia para:
+    - pagos directos del paciente (B2C)
+    - convenios empresariales (B2B)
+- El precio podrá:
+    - ser modificado por convenios
+    - ser ajustado en el módulo de facturación (futuro)
+- El catálogo define el precio base institucional.
+### 5.3. Clasificación del servicio
+- El sistema debe permitir clasificar los servicios según su naturaleza.
+- Ejemplos:
+    - Clínico (consulta médica, terapia)
+    - Diagnóstico (laboratorio, imágenes)
+    - Administrativo (certificados, constancias)
+    - Ocupacional (evaluaciones laborales)
+- Esta clasificación permite:
+    - aplicar reglas distintas por tipo
+    - facilitar reportes
+    - controlar accesos en B2B
+### 5.4. Modalidad del servicio
+- El sistema debe permitir definir la modalidad en la que puede brindarse un servicio.
+- Opciones:
+    - presencial
+    - virtual
+    - híbrido
+- Esta configuración debe ser compatible con:
+    - la disponibilidad del especialista
+- Regla:
+    - un servicio solo puede agendarse si su modalidad es compatible con el horario del especialista
+### 5.5. Reglas de Elegibilidad del Paciente
+- El sistema debe permitir definir condiciones que el paciente debe cumplir para acceder al servicio.
+- Ejemplos:
+    - edad mínima o máxima
+    - sexo (si aplica)
+    - tipo de paciente (nuevo / recurrente)
+    - pertenencia a convenio
+- Estas reglas serán validadas durante el proceso de agendamiento.
+### 5.6. Agrupación de servicios
+- El sistema debe permitir definir paquetes o conjuntos de servicios.
+- Ejemplos:
+    - evaluación ocupacional completa:
+        - laboratorio
+        - psicología
+        - medicina general
+    - chequeo preventivo
+- Estos paquetes permiten:
+    - agendamiento múltiple
+    - flujos encadenados
+    - uso en convenios empresariales
+### 5.7. Auditoría del catálogo
+- El sistema debe registrar cambios en:
+    - duración
+    - precio
+    - reglas operativas
+    - requerimientos
+- Incluyendo:
+    - usuario que realizó el cambio
+    - fecha y hora
+- Esto es importante para:
+    - trazabilidad
+    - auditoría clínica y administrativa
 
 ## 6. Requerimientos de Recursos
 - **Descripción**
