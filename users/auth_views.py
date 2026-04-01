@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
+from .serializers import CustomTokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -40,7 +41,12 @@ class LoginView(APIView):
                     if user.role not in role_map.get(portal, []):
                         return Response({"error": f"Tu rol ({user.role}) no tiene permitido el acceso al portal {portal}."}, status=status.HTTP_403_FORBIDDEN)
 
-                refresh = RefreshToken.for_user(user)
+                # Generar refreshToken con CustomTokenObtainPairSerializer para incluir todos los claims
+                refresh = CustomTokenObtainPairSerializer.get_token(user)
+                app_context = getattr(request, 'app_context', None)
+                if app_context:
+                    refresh['app_context'] = app_context
+
                 return Response({
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),

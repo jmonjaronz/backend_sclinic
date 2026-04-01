@@ -117,6 +117,36 @@ Este módulo gestiona la información profesional y la disponibilidad operativa 
         - disponibilidad del especialista
         - disponibilidad del consultorio
         - disponibilidad del recurso requerido por el servicio (si aplica).
+### 4.1. Separación entre Especialista y Usuario del Sistema
+- El sistema debe diferenciar entre:
+    - Especialista (entidad clínica/profesional)
+    - Usuario del sistema (credenciales de acceso)
+- Esto permite que:
+    - un especialista exista sin tener acceso al sistema
+    - la clínica registre especialistas externos o por convenio sin necesidad de crear cuentas digitales
+- Reglas:
+    - La creación de cuentas de usuario para especialistas debe ser gestionada por la clínica.
+    - Un especialista puede tener:
+        - acceso a la intranet clínica (si forma parte del staff)
+        - acceso restringido (si es externo)
+        - ningún acceso (solo registro operativo)
+    - Un mismo individuo puede ser:
+        - especialista dentro de la clínica
+        - paciente dentro de la misma u otra clínica
+    - En estos casos:
+        - el sistema debe permitir vincular ambas entidades sin mezclar sus datos clínicos ni operativos.
+### 4.2. Multi-rol de usuario
+- El sistema debe permitir que una persona pueda tener múltiples roles dentro de la plataforma.
+- Ejemplos:
+    - especialista que también es paciente
+    - especialista que también es responsable de un dependiente
+- Reglas:
+    - Cada rol debe operar de forma independiente a nivel de permisos y contexto.
+    - El sistema debe permitir cambiar de contexto (ej. “Modo Paciente” / “Modo Especialista”).
+    - La información clínica del especialista como paciente debe mantenerse completamente separada de su rol profesional.
+    - Esto es clave para:
+        - evitar conflictos de privacidad
+        - evitar accesos indebidos a información médica
 
 ## 5. Gestión de Disponibilidad del Especialista
 - **Descripción:**

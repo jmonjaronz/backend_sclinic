@@ -6,9 +6,13 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+class CustomTokenView(TokenObtainPairView):
+    from users.serializers import CustomTokenObtainPairSerializer
+    serializer_class = CustomTokenObtainPairSerializer
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/', CustomTokenView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # App endpoints
